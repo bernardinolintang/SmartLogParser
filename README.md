@@ -58,6 +58,26 @@ Analytics and Investigation Dashboards
 - Node.js 18+
 - Python 3.11+
 
+### Environment Setup
+
+Create your root `.env` from `.env.example`:
+
+```sh
+cp .env.example .env
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Set at minimum:
+
+- `GROQ_API_KEY` (required for LLM fallback parsing)
+- `MAX_UPLOAD_SIZE_MB` (optional upload limit override)
+- `DATABASE_URL` (optional, defaults to local SQLite when omitted)
+
 ### Install
 
 ```sh
@@ -77,6 +97,11 @@ This now starts both:
 
 - Frontend (Vite): `http://localhost:8080`
 - Backend (FastAPI): `http://localhost:8000`
+
+Backend interactive API docs:
+
+- Swagger UI: `http://localhost:8000/docs`
+- OpenAPI JSON: `http://localhost:8000/openapi.json`
 
 Useful alternatives:
 

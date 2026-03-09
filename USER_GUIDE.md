@@ -61,14 +61,49 @@ In the `Upload` tab, drag-and-drop a log file or select a sample log. You can al
 
 ### 2) Processing Pipeline
 
-The system runs:
+This is what the platform is doing under the hood, stage-by-stage:
 
-- format detection
-- parser routing
-- deterministic extraction
-- LLM fallback (only when needed)
-- normalization and validation
-- event storage and summary computation
+1. **Run Creation**
+   - Every upload creates a unique `run_id`.
+   - This keeps all events, summaries, and comparisons grouped by one processing session.
+
+2. **Format Detection**
+   - The backend inspects content patterns (not filename alone).
+   - It classifies logs as JSON, XML, CSV, key-value, syslog, text, or hex.
+   - Why this matters: each format has a dedicated parser for better accuracy.
+
+3. **Parser Routing**
+   - The file is sent to the matching parser path.
+   - Structured formats use deterministic extraction rules first.
+   - Why this matters: deterministic parsing is fast, cheap, and predictable.
+
+4. **Deterministic Parsing**
+   - The parser extracts fields like timestamp, tool/chamber, recipe step, parameter, value, and alarms.
+   - For example, `TEMP_C`, `Temperature`, and `temp` are all detected as sensor readings.
+   - Why this matters: core fab data is converted from raw text into machine-readable events.
+
+5. **LLM Fallback (Only If Needed)**
+   - If a row is ambiguous or partially parsed, only those rows are sent to Groq.
+   - The LLM is constrained to output strict JSON schema fields.
+   - Why this matters: you get flexibility for messy logs without using LLM on every line.
+
+6. **Normalization**
+   - Vendor-specific names are mapped to canonical names:
+     - `TEMP_C -> temperature`
+     - `PRESSURE_TORR -> pressure`
+     - `RFPOWER -> rf_power`
+   - Event labels and severity are also standardized.
+   - Why this matters: cross-vendor comparison becomes possible.
+
+7. **Validation**
+   - The system validates timestamp shape, numeric parameter rows, and schema consistency.
+   - Invalid/uncertain rows are marked `parse_status=partial` instead of crashing the run.
+   - Why this matters: robust processing even with imperfect logs.
+
+8. **Storage and Summary**
+   - Structured events are stored by `run_id` in the backend database.
+   - Summary metrics (alarm count, warnings, ranges, time windows) are computed.
+   - Why this matters: dashboards load quickly and stay consistent.
 
 ### 3) Review Dashboards
 
@@ -85,6 +120,45 @@ Use the left navigation to explore insights:
 - `Report` - shareable engineering summary
 - `Architecture` - end-to-end data flow explanation
 
+## What Each Dashboard Is For (Fab Workflow View)
+
+From an equipment/process engineering perspective:
+
+- **Overview**
+  - First triage screen.
+  - Confirms run volume, active alarms, tool/chamber scope, and time coverage.
+
+- **Health**
+  - Operational stability snapshot.
+  - Useful when determining if issue is isolated to one chamber or systemic.
+
+- **Data**
+  - Truth table for parsed events.
+  - Use this when you need exact event rows for RCA notes or handoff.
+
+- **Analytics / Trends**
+  - Parameter behavior through time.
+  - Best for identifying drift, oscillation, sudden jumps, and pre-alarm signatures.
+
+- **Recipe**
+  - Sequence-level visibility (`STEP_START`, `STEP_END`, transitions).
+  - Helps verify whether excursions align with specific process steps.
+
+- **Alarms / Anomaly**
+  - Incident-focused exploration.
+  - Helps isolate root events and surrounding machine state changes.
+
+- **Golden Run**
+  - Baseline-vs-current comparison.
+  - Useful for detecting subtle drift before hard alarm thresholds are crossed.
+
+- **Raw Log**
+  - Source traceability.
+  - Critical for auditability: verify what parser interpreted vs original text.
+
+- **Report**
+  - Compact output for shift handoff, review meetings, or judge demos.
+
 ## Alarm Investigation Workflow
 
 Recommended workflow for incident analysis:
@@ -94,6 +168,18 @@ Recommended workflow for incident analysis:
 3. Check `Trends` for pre-alarm parameter shifts.
 4. Compare against a stable baseline in `Golden Run`.
 5. Use `Raw Log` to validate parser interpretation.
+
+## Recommended Engineering Investigation Sequence
+
+If you are debugging a process incident:
+
+1. Start in `Overview` to scope blast radius (how many alarms, which tool/chamber).
+2. Move to `Alarms` and pick the first critical or earliest alarm.
+3. Use `Timeline`/`Recipe` to locate the exact process step around alarm onset.
+4. Open `Trends` for key parameters (`temperature`, `pressure`, `rf_power`, `gas_flow`).
+5. Compare with `Golden Run` to quantify deviation.
+6. Validate suspicious lines in `Raw Log`.
+7. Export structured data for downstream reporting if needed.
 
 ## Golden Run Comparison
 
