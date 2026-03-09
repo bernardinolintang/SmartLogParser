@@ -1,0 +1,35 @@
+"""Post-parse normalization: standardize names, units, event types, severity."""
+
+from app.utils.mappings import normalize_parameter, normalize_event_type, normalize_severity, infer_tool_type
+
+
+def normalize_events(events: list[dict]) -> list[dict]:
+    for e in events:
+        if e.get("parameter"):
+            e["parameter"] = normalize_parameter(e["parameter"])
+
+        if e.get("event_type"):
+            e["event_type"] = normalize_event_type(e["event_type"])
+
+        if e.get("severity"):
+            e["severity"] = normalize_severity(e["severity"])
+
+        if e.get("tool_id") and not e.get("tool_type"):
+            e["tool_type"] = infer_tool_type(e["tool_id"])
+
+        _fill_defaults(e)
+
+    return events
+
+
+def _fill_defaults(e: dict) -> None:
+    e.setdefault("fab_id", "FAB_01")
+    e.setdefault("tool_id", "UNKNOWN")
+    e.setdefault("tool_type", "unknown")
+    e.setdefault("chamber_id", "CH_A")
+    e.setdefault("event_type", "PARAMETER_READING")
+    e.setdefault("severity", "info")
+    e.setdefault("parse_status", "ok")
+    e.setdefault("timestamp", "")
+    e.setdefault("recipe_name", "")
+    e.setdefault("recipe_step", "")

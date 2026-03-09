@@ -1,0 +1,8 @@
+Mar 05 11:00:08 EUV_SCAN_01 SENSOR rf_power=480W temperature=22C pressure=1.2Torr
+Mar 05 11:00:15 EUV_SCAN_01 SENSOR laser_power=1200W wavelength=13.5nm
+Mar 05 11:01:02 EUV_SCAN_01 ALARM temperature=85C rf_power=520W
+Mar 05 11:01:30 EUV_SCAN_01 WARNING pressure=0.3Torr gas_flow=150sccm
+Mar 05 11:02:00 EUV_SCAN_01 SENSOR temperature=45C pressure=0.8Torr
+Mar 05 11:02:30 EUV_SCAN_01 SENSOR rf_power=500W gas_flow=300sccm
+Mar 05 11:03:00 EUV_SCAN_01 WARNING temperature=78C
+Mar 05 11:03:30 EUV_SCAN_01 SENSOR temperature=35C pressure=1.0Torr

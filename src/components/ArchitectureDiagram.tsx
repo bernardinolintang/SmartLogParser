@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowDown, Database, BarChart3, Cpu, FileText, Shield, Search, Radio, Zap } from 'lucide-react';
+import { ArrowDown, Database, BarChart3, Cpu, FileText, Shield, Search, Radio, Route, Bot } from 'lucide-react';
 
 const stages = [
   {
@@ -24,23 +24,37 @@ const stages = [
     bg: 'bg-warning/10',
   },
   {
+    icon: Route,
+    title: 'Parser Router',
+    desc: 'Routes to JSON/XML/CSV/KV/Syslog/Text/Hex parser paths',
+    color: 'text-secondary-foreground',
+    bg: 'bg-secondary/60',
+  },
+  {
     icon: FileText,
-    title: 'Vendor Log Parsers',
-    desc: 'Format-specific parsing engines with tokenization',
+    title: 'Deterministic Parsers',
+    desc: 'Rule-based extraction for structured and semi-structured logs',
     color: 'text-success',
     bg: 'bg-success/10',
   },
   {
-    icon: Zap,
+    icon: Bot,
+    title: 'LLM Fallback Parser',
+    desc: 'Groq-based extraction for messy or unknown vendor lines only',
+    color: 'text-warning',
+    bg: 'bg-warning/10',
+  },
+  {
+    icon: Shield,
     title: 'Normalization Engine',
-    desc: 'Fab → Tool → Chamber → Recipe → Step hierarchy',
+    desc: 'Canonical mapping: TEMP_C -> temperature, PRESSURE_TORR -> pressure',
     color: 'text-primary',
     bg: 'bg-primary/10',
   },
   {
     icon: Database,
-    title: 'Structured Event Schema',
-    desc: 'Canonical schema with fab_id, tool_id, chamber_id, recipe, run_id',
+    title: 'Structured Event + Storage',
+    desc: 'Validated schema stored by run_id for traceability and analytics',
     color: 'text-info',
     bg: 'bg-info/10',
   },
@@ -54,7 +68,7 @@ const stages = [
   {
     icon: Shield,
     title: 'Insights & Detection',
-    desc: 'Anomaly detection / Alarm investigation / Golden Run comparison',
+    desc: 'Alarm forensics, drift detection, golden-run comparison',
     color: 'text-destructive',
     bg: 'bg-destructive/10',
   },
@@ -65,7 +79,7 @@ export default function ArchitectureDiagram() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-2">System Architecture</h2>
-        <p className="text-sm text-muted-foreground">Smart Semiconductor Tool Log Parser — Processing Pipeline</p>
+        <p className="text-sm text-muted-foreground">Smart Semiconductor Tool Log Parser - Industrial Observability Pipeline</p>
       </div>
 
       <div className="max-w-lg mx-auto space-y-0">
@@ -81,6 +95,7 @@ export default function ArchitectureDiagram() {
               stage.color === 'text-info' ? 'border-l-info' :
               stage.color === 'text-warning' ? 'border-l-warning' :
               stage.color === 'text-success' ? 'border-l-success' :
+              stage.color === 'text-secondary-foreground' ? 'border-l-secondary-foreground' :
               'border-l-destructive'
             }`}>
               <div className={`p-2.5 rounded-lg ${stage.bg} flex-shrink-0`}>
@@ -122,9 +137,9 @@ export default function ArchitectureDiagram() {
       {/* Key features */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { title: 'Multi-Vendor Support', desc: 'Parse logs from any semiconductor equipment vendor with auto-format detection' },
-          { title: 'Equipment Hierarchy', desc: 'Navigate by Fab → Tool → Chamber → Recipe → Step for precise tracing' },
-          { title: 'Real-Time Monitoring', desc: 'Streaming log ingestion with live dashboards and instant alarm alerts' },
+          { title: 'Hybrid Parsing Strategy', desc: 'Deterministic parsers first, LLM only for partial or ambiguous lines to reduce cost and increase reliability' },
+          { title: 'Fab-Ready Context Model', desc: 'Standardized Fab -> Tool -> Chamber -> Recipe -> Step context supports real manufacturing investigations' },
+          { title: 'Streaming + Historical Analysis', desc: 'Same schema powers both line-by-line live ingestion and deep post-run engineering analysis' },
         ].map((feat, i) => (
           <motion.div
             key={feat.title}

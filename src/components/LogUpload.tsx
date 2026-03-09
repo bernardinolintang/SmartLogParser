@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, Cpu, Zap, ChevronRight } from 'lucide-react';
+import { Upload, FileText, Cpu, Zap, ChevronRight, Server, MonitorSmartphone } from 'lucide-react';
 import { parseLog, getSampleLogs, type LogFormat } from '@/lib/logParser';
 import type { ParseResult } from '@/lib/logParser';
+import { uploadLogToBackend, uploadLogContent, isBackendAvailable } from '@/lib/api';
 
 interface LogUploadProps {
   onParsed: (result: ParseResult, fileName: string) => void;
@@ -22,27 +23,74 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [detectedFormat, setDetectedFormat] = useState<LogFormat | null>(null);
+  const [backendUp, setBackendUp] = useState(false);
+  const [parseMode, setParseMode] = useState<'checking' | 'backend' | 'client'>('checking');
+  const [statusMsg, setStatusMsg] = useState('Parsing & normalizing...');
 
-  const processFile = useCallback(async (content: string, fileName: string) => {
+  useEffect(() => {
+    isBackendAvailable().then(ok => {
+      setBackendUp(ok);
+      setParseMode(ok ? 'backend' : 'client');
+    });
+  }, []);
+
+  const processViaBackend = useCallback(async (file: File) => {
     setProcessing(true);
     setDetectedFormat(null);
-    // Simulate processing stages
-    await new Promise(r => setTimeout(r, 600));
+    setStatusMsg('Detecting format...');
+    try {
+      const result = await uploadLogToBackend(file);
+      setDetectedFormat(result.format as LogFormat);
+      setStatusMsg('Normalizing events...');
+      await new Promise(r => setTimeout(r, 300));
+      setProcessing(false);
+      onParsed(result as ParseResult, file.name);
+    } catch {
+      setStatusMsg('Backend unavailable, falling back to client...');
+      await new Promise(r => setTimeout(r, 400));
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        processClientSide(content, file.name);
+      };
+      reader.readAsText(file);
+    }
+  }, [onParsed]);
+
+  const processClientSide = useCallback(async (content: string, fileName: string) => {
+    setProcessing(true);
+    setDetectedFormat(null);
+    setStatusMsg('Detecting format...');
+    await new Promise(r => setTimeout(r, 400));
     const result = parseLog(content);
     setDetectedFormat(result.format);
-    await new Promise(r => setTimeout(r, 800));
+    setStatusMsg('Building dashboard...');
+    await new Promise(r => setTimeout(r, 400));
     setProcessing(false);
     onParsed(result, fileName);
   }, [onParsed]);
 
+  const processFile = useCallback(async (content: string, fileName: string) => {
+    if (backendUp) {
+      const blob = new Blob([content], { type: 'text/plain' });
+      const file = new File([blob], fileName);
+      return processViaBackend(file);
+    }
+    return processClientSide(content, fileName);
+  }, [backendUp, processViaBackend, processClientSide]);
+
   const handleFile = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      processFile(content, file.name);
-    };
-    reader.readAsText(file);
-  }, [processFile]);
+    if (backendUp) {
+      processViaBackend(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        processClientSide(content, file.name);
+      };
+      reader.readAsText(file);
+    }
+  }, [backendUp, processViaBackend, processClientSide]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -85,7 +133,7 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
             }
           `}
         >
-          <input type="file" className="hidden" onChange={handleFileInput} accept=".json,.xml,.csv,.log,.txt,.hex" />
+          <input type="file" className="hidden" onChange={handleFileInput} accept=".json,.xml,.csv,.log,.txt,.hex,.kv" />
           <AnimatePresence mode="wait">
             {processing ? (
               <motion.div
@@ -109,7 +157,7 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
                   )}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className="animate-pulse-glow">●</span>
-                    Parsing & normalizing...
+                    {statusMsg}
                   </div>
                 </div>
               </motion.div>
@@ -127,8 +175,17 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
                 <div className="text-center">
                   <p className="text-foreground font-medium">Drop a log file or click to upload</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    JSON · XML · CSV · Syslog · Text · Hex
+                    JSON · XML · CSV · Syslog · Text · Hex · Key-Value
                   </p>
+                  <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px]">
+                    {backendUp ? (
+                      <span className="flex items-center gap-1 text-green-400"><Server className="w-3 h-3" /> Backend connected</span>
+                    ) : parseMode !== 'checking' ? (
+                      <span className="flex items-center gap-1 text-yellow-400"><MonitorSmartphone className="w-3 h-3" /> Client-side mode</span>
+                    ) : (
+                      <span className="text-muted-foreground">Checking backend...</span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             )}

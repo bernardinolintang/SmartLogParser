@@ -1,0 +1,63 @@
+{
+  "FabID": "FAB_01",
+  "EquipmentID": "ETCH_TOOL_01",
+  "ChamberID": "CH_A",
+  "RecipeID": "RCP_POLYETCH_02",
+  "LotID": "LOT_2026_0305",
+  "RunID": "RUN_ET01_001",
+  "Timestamp": "2026-03-05T11:00:00Z",
+  "ProcessSteps": [
+    {
+      "StepID": 1,
+      "StepName": "Pump Down",
+      "Timestamp": "2026-03-05T11:00:05Z",
+      "Parameters": {
+        "Temperature": { "value": 25, "unit": "C" },
+        "Pressure": { "value": 760, "unit": "Torr" },
+        "GasFlow": { "value": 0, "unit": "sccm" }
+      }
+    },
+    {
+      "StepID": 2,
+      "StepName": "Gas Stabilization",
+      "Timestamp": "2026-03-05T11:02:10Z",
+      "Parameters": {
+        "Temperature": { "value": 80, "unit": "C" },
+        "Pressure": { "value": 0.5, "unit": "Torr" },
+        "GasFlow": { "value": 200, "unit": "sccm" }
+      }
+    },
+    {
+      "StepID": 3,
+      "StepName": "Plasma Etch",
+      "Timestamp": "2026-03-05T11:05:30Z",
+      "Parameters": {
+        "Temperature": { "value": 120, "unit": "C" },
+        "Pressure": { "value": 0.8, "unit": "Torr" },
+        "RF_Power": { "value": 500, "unit": "W" },
+        "GasFlow": { "value": 350, "unit": "sccm" }
+      }
+    },
+    {
+      "StepID": 4,
+      "StepName": "Main Etch",
+      "Timestamp": "2026-03-05T11:10:00Z",
+      "Parameters": {
+        "Temperature": { "value": 120, "unit": "C" },
+        "Pressure": { "value": 0.75, "unit": "Torr" },
+        "RF_Power": { "value": 480, "unit": "W" },
+        "GasFlow": { "value": 340, "unit": "sccm" }
+      }
+    },
+    {
+      "StepID": 5,
+      "StepName": "Cool Down",
+      "Timestamp": "2026-03-05T11:15:00Z",
+      "Parameters": {
+        "Temperature": { "value": 40, "unit": "C" },
+        "Pressure": { "value": 200, "unit": "Torr" },
+        "GasFlow": { "value": 50, "unit": "sccm" }
+      }
+    }
+  ]
+}

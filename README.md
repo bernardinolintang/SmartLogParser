@@ -1,73 +1,199 @@
-# Welcome to your Lovable project
+# Smart Semiconductor Tool Log Parser
 
-## Project info
+Smart Semiconductor Tool Log Parser is a full-stack observability platform that transforms heterogeneous semiconductor equipment logs into structured machine events for analytics, process monitoring, and engineering investigation.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+This project simulates a real fab-style data pipeline:
 
-## How can I edit this code?
+`raw logs -> parsing + normalization -> structured events -> dashboards + diagnostics`
 
-There are several ways of editing your application.
+## Manufacturing Context
 
-**Use Lovable**
+Semiconductor tools such as plasma etch systems, CVD/PVD deposition tools, lithography scanners, metrology stations, and wafer inspection systems produce high-volume, vendor-specific logs. These logs differ in syntax, metadata shape, and naming conventions, but often describe the same underlying machine behavior.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+In production fabs, process and equipment engineers do not manually read raw logs line-by-line at scale. Instead, data pipelines ingest and standardize logs so teams can monitor health, investigate alarms, and detect drift.
 
-Changes made via Lovable will be committed automatically to this repo.
+This project demonstrates exactly that workflow.
 
-**Use your preferred IDE**
+## Core Capabilities
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- Multi-format ingestion: JSON, XML, CSV, key-value, syslog, text, hex
+- Automatic format detection and parser routing
+- Deterministic parsing for structured formats
+- LLM-assisted fallback parsing for ambiguous or unstructured lines
+- Vendor-to-canonical normalization (`TEMP_C -> temperature`, etc.)
+- Event validation with partial-row handling (no full-run failure)
+- Run-based storage and summary metrics
+- Dashboard workflows for alarms, trends, health, and comparisons
+- Golden-run baseline comparison and drift detection
+- Simulated real-time streaming ingestion
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## End-to-End Architecture
 
-Follow these steps:
+```
+Semiconductor Equipment Tools
+        ->
+Log Ingestion Layer (upload / streaming)
+        ->
+Format Detection
+        ->
+Parser Router
+        ->
+Specialized Parsers (JSON/XML/CSV/KV/Syslog/Text/Hex)
+        ->
+LLM Fallback (only when deterministic confidence is low)
+        ->
+Normalization Engine
+        ->
+Structured Event Schema
+        ->
+Database Storage
+        ->
+Analytics and Investigation Dashboards
+```
+
+## One-Command Local Run
+
+### Prerequisites
+
+- Node.js 18+
+- Python 3.11+
+
+### Install
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+npm install
+cd backend && pip install -r requirements.txt
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Start Everything
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```sh
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+This now starts both:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Frontend (Vite): `http://localhost:8080`
+- Backend (FastAPI): `http://localhost:8000`
 
-**Use GitHub Codespaces**
+Useful alternatives:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- `npm run dev:frontend` - frontend only
+- `npm run dev:backend` - backend only
 
-## What technologies are used for this project?
+## Project Layout
 
-This project is built with:
+Current implementation:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+SmartLogParser/
+  backend/
+    app/
+      parsers/
+      services/
+      routes/
+      models.py
+      schemas.py
+      security.py
+      main.py
+    sample_logs/
+    requirements.txt
+  src/
+    components/
+    pages/
+    lib/
+  README.md
+  USER_GUIDE.md
+  DEVELOPER_GUIDE.md
+```
 
-## How can I deploy this project?
+Reference split-layout for larger teams:
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```
+project-root/
+  frontend/
+  backend/
+```
 
-## Can I connect a custom domain to my Lovable project?
+## Canonical Event Model
 
-Yes, you can!
+Every parser emits the same logical schema:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `run_id`
+- `timestamp`
+- `fab_id`
+- `tool_id`
+- `chamber_id`
+- `recipe_name`
+- `recipe_step`
+- `event_type`
+- `parameter`
+- `value`
+- `unit`
+- `alarm_code`
+- `severity`
+- `message`
+- `raw_line`
+- `source_format`
+- `parse_status`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Missing values are represented as `null`/empty based on parser context, then normalized.
+
+## Supported Event Types
+
+- `PROCESS_START`
+- `PROCESS_END`
+- `STEP_START`
+- `STEP_END`
+- `PARAMETER_READING`
+- `ALARM`
+- `WARNING`
+- `STATE_CHANGE`
+- `PROCESS_ABORT`
+- `DRIFT_WARNING`
+
+## Parameter Focus for Monitoring
+
+- `temperature`
+- `pressure`
+- `rf_power`
+- `gas_flow`
+- `voltage`
+- `current`
+- `pump_speed`
+
+## API Surface (MVP)
+
+- `POST /api/upload`
+- `POST /api/parse`
+- `GET /api/runs`
+- `GET /api/runs/{run_id}`
+- `GET /api/runs/{run_id}/events`
+- `GET /api/runs/{run_id}/summary`
+- `GET /api/runs/{run_id}/timeseries`
+- `GET /api/runs/{run_id}/timeline`
+- `GET /api/runs/{run_id}/health`
+- `GET /api/runs/{run_id}/drift`
+- `POST /api/runs/{run_id}/mark-golden`
+- `GET /api/golden/compare`
+- `GET /api/runs/{run_id}/download/csv`
+- `GET /api/runs/{run_id}/download/json`
+- `POST /api/stream/start`
+- `POST /api/stream/append`
+- `POST /api/stream/finish`
+
+## Security Controls
+
+- Extension allowlist and upload size limits
+- Sanitized server-side filenames and non-public upload storage
+- Safe XML parsing (`defusedxml`)
+- Strict schema-constrained LLM output handling
+- Prompt-injection-aware LLM system prompts
+- API key isolation via environment variables
+- CSV formula injection mitigation on exports
+- No dynamic code execution of uploaded payloads
+
+## Additional Documentation
+
+- `USER_GUIDE.md` - product usage guide for operators, judges, and non-specialists
+- `DEVELOPER_GUIDE.md` - implementation guide for engineers extending parsers, services, and dashboards
