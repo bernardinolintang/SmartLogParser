@@ -175,8 +175,8 @@ backend/app/
 
 Frontend entry points:
 
-- `src/lib/api.ts`: backend transport layer
-- `src/components/LogUpload.tsx`: backend/client fallback logic
+- `frontend/src/lib/api.ts`: backend transport layer
+- `frontend/src/components/LogUpload.tsx`: backend/client fallback logic
 - dashboard components consume parsed event collections and summaries
 
 The UI is intentionally observability-first: overview, alarms, trends, health, raw traceability, and architecture narrative.
@@ -192,7 +192,7 @@ npm run dev
 This runs:
 
 - FastAPI backend on `:8000`
-- Vite frontend on `:5173`
+- Vite frontend on `:8080`
 
 Auxiliary scripts:
 
@@ -220,7 +220,7 @@ Update `backend/app/utils/mappings.py`:
 ### Add new dashboard features
 
 1. Add API endpoint from stored events/aggregates.
-2. Add component in `src/components/`.
+2. Add component in `frontend/src/components/`.
 3. Reuse run filtering dimensions (`tool/chamber/recipe/step/run_id`).
 
 ## 13) Security Requirements

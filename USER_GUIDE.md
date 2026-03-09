@@ -35,6 +35,7 @@ Without structured processing, root-cause analysis is slow. This platform simula
 
 ```sh
 npm install
+npm --prefix frontend install
 npm run dev
 ```
 

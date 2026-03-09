@@ -62,7 +62,9 @@ Analytics and Investigation Dashboards
 
 ```sh
 npm install
-cd backend && pip install -r requirements.txt
+npm --prefix frontend install
+cd backend
+pip install -r requirements.txt
 ```
 
 ### Start Everything
@@ -87,6 +89,13 @@ Current implementation:
 
 ```
 SmartLogParser/
+  frontend/
+    src/
+      components/
+      pages/
+      lib/
+    public/
+    package.json
   backend/
     app/
       parsers/
@@ -98,10 +107,6 @@ SmartLogParser/
       main.py
     sample_logs/
     requirements.txt
-  src/
-    components/
-    pages/
-    lib/
   README.md
   USER_GUIDE.md
   DEVELOPER_GUIDE.md
