@@ -14,6 +14,7 @@ _COLON_PATTERN = re.compile(r"([\w\s]+?):\s*([\d.]+)\s*(\w+)?")
 _SET_TO_PATTERN = re.compile(r"([\w\s]+?)\s+set\s+to\s+([\d.]+)\s*(\w+)?", re.IGNORECASE)
 _ALARM_PATTERN = re.compile(r"alarm|fault|failure|error|critical", re.IGNORECASE)
 _WARNING_PATTERN = re.compile(r"warning|caution|unstable|drift", re.IGNORECASE)
+_PROCESS_ABORT_PATTERN = re.compile(r"process\s+abort|process\s+aborted|abort", re.IGNORECASE)
 
 
 def parse_text(content: str, run_id: str) -> list[dict]:
@@ -31,12 +32,15 @@ def parse_text(content: str, run_id: str) -> list[dict]:
         else:
             severity = "info"
             event_type = "INFO"
-            if _ALARM_PATTERN.search(line):
+            if _PROCESS_ABORT_PATTERN.search(line):
+                severity = "alarm"
+                event_type = "PROCESS_ABORT"
+            elif _ALARM_PATTERN.search(line):
                 severity = "alarm"
                 event_type = "ALARM"
             elif _WARNING_PATTERN.search(line):
                 severity = "warning"
-                event_type = "WARNING"
+                event_type = "DRIFT_WARNING" if "drift" in line.lower() else "WARNING"
 
             events.append({
                 "run_id": run_id,

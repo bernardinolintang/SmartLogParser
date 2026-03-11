@@ -12,6 +12,7 @@ from app.services.format_detector import detect_format
 from app.services.normalization import normalize_events
 from app.services.validation import validate_events
 from app.services.llm_service import enhance_partial_events
+from app.services.deduplication import deduplicate_event_dicts, existing_hashes_from_models
 from app.parsers import parse_json, parse_csv, parse_kv, parse_syslog, parse_text, parse_hex, parse_xml
 
 router = APIRouter(prefix="/api/stream", tags=["streaming"])
@@ -67,9 +68,14 @@ def stream_append(req: StreamAppendRequest, db: Session = Depends(get_db)):
     if partial_count > 0:
         validated = enhance_partial_events(validated, req.run_id)
         validated = normalize_events(validated)
+        validated = validate_events(validated)
+
+    existing_events = db.query(Event).filter(Event.run_id == req.run_id).all()
+    existing_hashes = existing_hashes_from_models(existing_events)
+    unique_events, dropped_duplicates, _ = deduplicate_event_dicts(validated, existing_hashes)
 
     db_events = []
-    for e in validated:
+    for e in unique_events:
         db_events.append(Event(
             run_id=e.get("run_id", req.run_id),
             timestamp=e.get("timestamp"),
@@ -98,6 +104,7 @@ def stream_append(req: StreamAppendRequest, db: Session = Depends(get_db)):
     return {
         "run_id": req.run_id,
         "new_events": len(db_events),
+        "duplicates_dropped": dropped_duplicates,
         "total_events": run.total_events,
     }
 

@@ -15,6 +15,7 @@ from app.services.format_detector import detect_format
 from app.services.normalization import normalize_events
 from app.services.validation import validate_events
 from app.services.llm_service import enhance_partial_events
+from app.services.deduplication import deduplicate_event_dicts
 from app.services.summary import compute_summary
 from app.parsers import (
     parse_json,
@@ -69,8 +70,12 @@ def parse_file(content: str, filename: str, db: Session) -> dict:
             validated = normalize_events(validated)
             validated = validate_events(validated)
 
+        unique_events, dropped_duplicates, _ = deduplicate_event_dicts(validated)
+        if dropped_duplicates > 0:
+            logger.info("Dropped %d duplicate events in run %s", dropped_duplicates, run_id)
+
         db_events = []
-        for e in validated:
+        for e in unique_events:
             db_events.append(Event(
                 run_id=e.get("run_id", run_id),
                 timestamp=e.get("timestamp"),
@@ -148,6 +153,7 @@ def parse_file(content: str, filename: str, db: Session) -> dict:
             "total_events": len(db_events),
             "alarm_count": alarm_count,
             "warning_count": warning_count,
+            "duplicates_dropped": dropped_duplicates,
             "status": "completed",
         }
 

@@ -33,7 +33,7 @@ const stages = [
   {
     icon: FileText,
     title: 'Deterministic Parsers',
-    desc: 'Rule-based extraction for structured and semi-structured logs',
+    desc: 'Rule-based tokenization and extraction for structured and semi-structured logs',
     color: 'text-success',
     bg: 'bg-success/10',
   },

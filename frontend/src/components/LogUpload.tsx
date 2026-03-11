@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Cpu, Zap, ChevronRight, Server, MonitorSmartphone } from 'lucide-react';
 import { parseLog, getSampleLogs, type LogFormat } from '@/lib/logParser';
 import type { ParseResult } from '@/lib/logParser';
-import { uploadLogToBackend, uploadLogContent, isBackendAvailable } from '@/lib/api';
+import { uploadLogToBackend, isBackendAvailable } from '@/lib/api';
 
 interface LogUploadProps {
   onParsed: (result: ParseResult, fileName: string) => void;
@@ -49,9 +49,18 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
       setStatusMsg('Backend unavailable, falling back to client...');
       await new Promise(r => setTimeout(r, 400));
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const content = e.target?.result as string;
-        processClientSide(content, file.name);
+        setProcessing(true);
+        setDetectedFormat(null);
+        setStatusMsg('Detecting format...');
+        await new Promise(r => setTimeout(r, 400));
+        const result = parseLog(content);
+        setDetectedFormat(result.format);
+        setStatusMsg('Building dashboard...');
+        await new Promise(r => setTimeout(r, 400));
+        setProcessing(false);
+        onParsed(result, file.name);
       };
       reader.readAsText(file);
     }

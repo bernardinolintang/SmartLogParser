@@ -52,10 +52,13 @@ EVENT_TYPE_MAP: dict[str, str] = {
     "step_end": "STEP_END",
     "process_start": "PROCESS_START",
     "process_end": "PROCESS_END",
+    "process_abort": "PROCESS_ABORT",
     "state_change": "STATE_CHANGE",
+    "drift_warning": "DRIFT_WARNING",
 
     "Start process": "PROCESS_START",
     "Process started": "PROCESS_START",
+    "Process aborted": "PROCESS_ABORT",
     "Alarm triggered": "ALARM",
     "Temperature drift detected": "DRIFT_WARNING",
 }

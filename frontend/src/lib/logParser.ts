@@ -99,26 +99,32 @@ function makeEvent(partial: Partial<ParsedEvent>): ParsedEvent {
 function parseJSON(content: string): ParsedEvent[] {
   const events: ParsedEvent[] = [];
   try {
-    const data = JSON.parse(content);
+    const data: unknown = JSON.parse(content);
     const items = Array.isArray(data) ? data : [data];
     for (const item of items) {
-      const toolId = item.EquipmentID || item.equipment_id || item.ToolID || item.tool_id || 'UNKNOWN';
-      const recipeId = item.RecipeID || item.recipe_id || item.RecipeName || '';
-      const lotId = item.LotID || item.lot_id;
-      const fabId = item.FabID || item.fab_id || 'FAB_01';
-      const chamberId = item.ChamberID || item.chamber_id || 'CH_A';
-      const runId = item.RunID || item.run_id || `RUN_${toolId.slice(-2)}_001`;
+      if (!item || typeof item !== 'object') continue;
+      const row = item as Record<string, unknown>;
+      const toolId = String(row.EquipmentID || row.equipment_id || row.ToolID || row.tool_id || 'UNKNOWN');
+      const recipeId = String(row.RecipeID || row.recipe_id || row.RecipeName || '');
+      const lotId = row.LotID || row.lot_id ? String(row.LotID || row.lot_id) : undefined;
+      const fabId = String(row.FabID || row.fab_id || 'FAB_01');
+      const chamberId = String(row.ChamberID || row.chamber_id || 'CH_A');
+      const runId = String(row.RunID || row.run_id || `RUN_${toolId.slice(-2)}_001`);
 
-      if (item.ProcessSteps || item.steps) {
-        const steps = item.ProcessSteps || item.steps;
+      if (row.ProcessSteps || row.steps) {
+        const steps = Array.isArray(row.ProcessSteps) ? row.ProcessSteps : (Array.isArray(row.steps) ? row.steps : []);
         for (const step of steps) {
-          const stepId = step.StepID || step.step_id || step.id;
-          const stepName = step.StepName || step.step_name || '';
-          const params = step.Parameters || step.parameters || step.params || {};
+          if (!step || typeof step !== 'object') continue;
+          const stepRow = step as Record<string, unknown>;
+          const stepId = stepRow.StepID || stepRow.step_id || stepRow.id;
+          const stepName = stepRow.StepName || stepRow.step_name || '';
+          const paramsRaw = stepRow.Parameters || stepRow.parameters || stepRow.params || {};
+          const params = (paramsRaw && typeof paramsRaw === 'object') ? paramsRaw as Record<string, unknown> : {};
           for (const [key, val] of Object.entries(params)) {
-            const v = val as any;
+            const v = val as unknown;
+            const vObj = (v && typeof v === 'object') ? v as Record<string, unknown> : null;
             events.push(makeEvent({
-              timestamp: step.Timestamp || step.timestamp || item.Timestamp || new Date().toISOString(),
+              timestamp: String(stepRow.Timestamp || stepRow.timestamp || row.Timestamp || new Date().toISOString()),
               fab_id: fabId,
               tool_id: toolId,
               chamber_id: chamberId,
@@ -126,8 +132,8 @@ function parseJSON(content: string): ParsedEvent[] {
               recipe_step: stepName || String(stepId),
               event_type: 'sensor',
               parameter: normalizeParam(key),
-              value: typeof v === 'object' ? (v.value ?? String(v)) : String(v),
-              unit: typeof v === 'object' ? v.unit : undefined,
+              value: vObj ? String(vObj.value ?? String(v)) : String(v),
+              unit: vObj?.unit ? String(vObj.unit) : undefined,
               run_id: runId,
               lot_id: lotId,
               severity: 'info',
@@ -135,10 +141,10 @@ function parseJSON(content: string): ParsedEvent[] {
           }
         }
       } else {
-        for (const [key, val] of Object.entries(item)) {
+        for (const [key, val] of Object.entries(row)) {
           if (['EquipmentID', 'equipment_id', 'RecipeID', 'LotID', 'Timestamp', 'ToolID', 'FabID', 'ChamberID', 'RunID'].includes(key)) continue;
           events.push(makeEvent({
-            timestamp: item.Timestamp || item.timestamp || new Date().toISOString(),
+            timestamp: String(row.Timestamp || row.timestamp || new Date().toISOString()),
             fab_id: fabId,
             tool_id: toolId,
             chamber_id: chamberId,
@@ -172,14 +178,14 @@ function parseCSV(content: string): ParsedEvent[] {
       chamber_id: row['chamber_id'] || 'CH_A',
       recipe_name: row['recipe_name'] || row['recipe'] || '',
       recipe_step: row['step_id'] || row['step'] || row['recipe_step'] || '',
-      event_type: (row['event_type'] as any) || 'sensor',
+      event_type: (row['event_type'] as ParsedEvent['event_type']) || 'sensor',
       parameter: normalizeParam(row['parameter'] || row['param'] || 'value'),
       value: row['value'] || row['reading'] || '',
       unit: row['unit'],
       run_id: row['run_id'] || `RUN_CSV_${i}`,
       lot_id: row['lot_id'],
       wafer_id: row['wafer_id'],
-      severity: row['severity'] as any || 'info',
+      severity: (row['severity'] as ParsedEvent['severity']) || 'info',
     }));
   }
   return events;
@@ -229,7 +235,7 @@ function parseSyslog(content: string): ParsedEvent[] {
       const isAlarm = category === 'ALARM';
       const isWarning = category === 'WARNING';
       const severity = isAlarm ? 'alarm' : isWarning ? 'warning' : 'info';
-      const eventType = isAlarm ? 'alarm' : isWarning ? 'warning' : 'sensor';
+      const eventType: ParsedEvent['event_type'] = isAlarm ? 'alarm' : isWarning ? 'warning' : 'sensor';
       if (kvPairs) {
         for (const kv of kvPairs) {
           const [key, val] = kv.split('=');
@@ -237,7 +243,7 @@ function parseSyslog(content: string): ParsedEvent[] {
           events.push(makeEvent({
             timestamp: `2026-${timestamp}`,
             tool_id: equipment,
-            event_type: eventType as any,
+            event_type: eventType,
             parameter: normalizeParam(key),
             value: unitMatch ? unitMatch[1] : val,
             unit: unitMatch ? unitMatch[2] : undefined,
@@ -249,7 +255,7 @@ function parseSyslog(content: string): ParsedEvent[] {
         events.push(makeEvent({
           timestamp: `2026-${timestamp}`,
           tool_id: equipment,
-          event_type: eventType as any,
+            event_type: eventType,
           parameter: category.toLowerCase(),
           value: rest,
           severity,
