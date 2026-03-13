@@ -11,7 +11,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.models import Run, Event
-from app.services.format_detector import detect_format
+from app.services.format_detector import detect_format_with_confidence
 from app.services.normalization import normalize_events
 from app.services.validation import validate_events
 from app.services.llm_service import enhance_partial_events, classify_log_format_with_llm
@@ -25,6 +25,7 @@ from app.parsers import (
     parse_syslog,
     parse_text,
     parse_hex,
+    parse_binary,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,15 +38,16 @@ _PARSER_MAP = {
     "syslog": parse_syslog,
     "text": parse_text,
     "hex": parse_hex,
+    "binary": parse_binary,
 }
 
 
-def parse_file(content: str, filename: str, db: Session) -> dict:
+def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None = None) -> dict:
     """Full parse pipeline: detect -> parse -> normalize -> validate -> LLM -> store."""
     run_id = f"RUN_{uuid.uuid4().hex[:12].upper()}"
 
-    fmt = detect_format(content)
-    logger.info("Detected format: %s for %s", fmt, filename)
+    fmt, confidence = detect_format_with_confidence(content, raw_bytes)
+    logger.info("Detected format: %s (confidence=%.2f) for %s", fmt, confidence, filename)
 
     run = Run(
         run_id=run_id,
@@ -58,7 +60,7 @@ def parse_file(content: str, filename: str, db: Session) -> dict:
 
     try:
         parser_fn = _PARSER_MAP.get(fmt, parse_text)
-        raw_events = parser_fn(content, run_id)
+        raw_events = _invoke_parser(parser_fn, content, run_id, raw_bytes)
 
         # Recovery path for malformed or mislabeled files:
         # 1) try alternate deterministic parsers, 2) ask LLM for likely format.
@@ -70,7 +72,7 @@ def parse_file(content: str, filename: str, db: Session) -> dict:
             for candidate_fmt, candidate_parser in _PARSER_MAP.items():
                 if candidate_fmt == fmt:
                     continue
-                candidate_events = candidate_parser(content, run_id)
+                candidate_events = _invoke_parser(candidate_parser, content, run_id, raw_bytes)
                 if len(candidate_events) > len(best_events):
                     best_fmt = candidate_fmt
                     best_events = candidate_events
@@ -82,7 +84,7 @@ def parse_file(content: str, filename: str, db: Session) -> dict:
             else:
                 llm_fmt = classify_log_format_with_llm(content)
                 if llm_fmt and llm_fmt in _PARSER_MAP and llm_fmt != fmt:
-                    llm_events = _PARSER_MAP[llm_fmt](content, run_id)
+                    llm_events = _invoke_parser(_PARSER_MAP[llm_fmt], content, run_id, raw_bytes)
                     if llm_events:
                         fmt = llm_fmt
                         raw_events = llm_events
@@ -173,6 +175,7 @@ def parse_file(content: str, filename: str, db: Session) -> dict:
         return {
             "run_id": run_id,
             "format": fmt,
+            "format_confidence": round(confidence, 3),
             "events": frontend_events,
             "rawContent": content,
             "summary": summary,
@@ -205,3 +208,9 @@ def _event_type_to_frontend(et: str) -> str:
         "STATE_CHANGE": "info",
     }
     return mapping.get(et, "info")
+
+
+def _invoke_parser(parser_fn, content: str, run_id: str, raw_bytes: bytes | None) -> list[dict]:
+    if parser_fn is parse_binary:
+        return parser_fn(content, run_id, raw_bytes)
+    return parser_fn(content, run_id)

@@ -5,6 +5,7 @@ from app.parsers.kv_parser import parse_kv
 from app.parsers.syslog_parser import parse_syslog
 from app.parsers.text_parser import parse_text
 from app.parsers.hex_parser import parse_hex
+from app.parsers.binary_parser import parse_binary
 
 __all__ = [
     "parse_json",
@@ -14,4 +15,5 @@ __all__ = [
     "parse_syslog",
     "parse_text",
     "parse_hex",
+    "parse_binary",
 ]

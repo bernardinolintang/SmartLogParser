@@ -16,7 +16,7 @@ This project demonstrates exactly that workflow.
 
 ## Core Capabilities
 
-- Multi-format ingestion: JSON, XML, CSV, key-value, syslog, text, hex
+- Multi-format ingestion: JSON, XML, CSV, key-value, syslog, text, hex, binary (`.bin`)
 - Automatic format detection and parser routing
 - Deterministic parsing for structured formats
 - LLM-assisted fallback parsing for ambiguous or unstructured lines
@@ -46,7 +46,7 @@ Format Detection
         ->
 Parser Router
         ->
-Specialized Parsers (JSON/XML/CSV/KV/Syslog/Text/Hex)
+Specialized Parsers (JSON/XML/CSV/KV/Syslog/Text/Hex/Binary)
         ->
 LLM Fallback (only when deterministic confidence is low)
         ->
@@ -219,6 +219,14 @@ Missing values are represented as `null`/empty based on parser context, then nor
 - `POST /api/stream/start`
 - `POST /api/stream/append`
 - `POST /api/stream/finish`
+- `GET /api/synthetic/{format_type}` (`json|xml|csv|kv|syslog|text|binary|hex`)
+
+Notable parser updates:
+
+- Confidence-scored format detection (`format + confidence`)
+- RFC-aware syslog parsing (RFC5424 + RFC3164 patterns)
+- Dedicated binary parser for struct-packed tool logs (with hex fallback)
+- Synthetic log generator endpoints for all supported formats
 
 ## Security Controls
 
