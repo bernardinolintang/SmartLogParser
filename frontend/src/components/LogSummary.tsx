@@ -15,10 +15,11 @@ const FORMAT_BADGES: Record<LogFormat, { label: string; className: string }> = {
   text: { label: 'TEXT', className: 'bg-secondary text-secondary-foreground' },
   hex: { label: 'HEX', className: 'bg-destructive/20 text-destructive' },
   keyvalue: { label: 'KEY-VALUE', className: 'bg-primary/20 text-primary' },
+  kv: { label: 'KEY-VALUE', className: 'bg-primary/20 text-primary' },
 };
 
 export default function LogSummary({ result, fileName }: LogSummaryProps) {
-  const badge = FORMAT_BADGES[result.format];
+  const badge = FORMAT_BADGES[result.format] ?? { label: String(result.format).toUpperCase(), className: 'bg-secondary text-secondary-foreground' };
 
   return (
     <motion.div

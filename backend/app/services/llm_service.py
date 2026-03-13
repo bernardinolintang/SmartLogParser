@@ -39,6 +39,20 @@ Output a JSON array of objects. Each object must follow this schema exactly:
 If a field cannot be inferred, set it to null.
 Return ONLY valid JSON. No explanations."""
 
+_FORMAT_SYSTEM_PROMPT = """You are classifying semiconductor tool log format.
+
+Given raw log content, respond with exactly one token from:
+json, xml, csv, kv, syslog, text, hex
+
+Rules:
+- If malformed JSON-like content, still return json.
+- If malformed XML-like content, still return xml.
+- Use kv for key=value dominant lines.
+- Use syslog for month/day/time host category patterns.
+- Use text as fallback.
+Return only the token, nothing else.
+"""
+
 
 def _get_client() -> Groq | None:
     if not settings.groq_api_key:
@@ -98,6 +112,31 @@ def parse_lines_with_llm(lines: list[str], run_id: str) -> list[dict]:
     except Exception as e:
         logger.error("LLM parsing failed: %s", e)
         return []
+
+
+def classify_log_format_with_llm(content: str) -> str | None:
+    """Use LLM to classify ambiguous or malformed log content format."""
+    client = _get_client()
+    if client is None:
+        return None
+
+    snippet = content[:4000]
+    try:
+        response = client.chat.completions.create(
+            model=settings.llm_model,
+            messages=[
+                {"role": "system", "content": _FORMAT_SYSTEM_PROMPT},
+                {"role": "user", "content": snippet},
+            ],
+            temperature=0.0,
+            max_tokens=16,
+        )
+        token = response.choices[0].message.content.strip().lower()
+        allowed = {"json", "xml", "csv", "kv", "syslog", "text", "hex"}
+        return token if token in allowed else None
+    except Exception as e:
+        logger.error("LLM format classification failed: %s", e)
+        return None
 
 
 def enhance_partial_events(events: list[dict], run_id: str) -> list[dict]:

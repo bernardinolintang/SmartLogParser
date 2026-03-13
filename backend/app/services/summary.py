@@ -8,7 +8,23 @@ from app.models import Event, RunSummary
 def compute_summary(db: Session, run_id: str) -> dict:
     events = db.query(Event).filter(Event.run_id == run_id).all()
     if not events:
-        return {}
+        return {
+            "run_id": run_id,
+            "totalEvents": 0,
+            "alarms": 0,
+            "warnings": 0,
+            "process_success": True,
+            "stability_score": 1.0,
+            "top_alarm": None,
+            "fabIds": [],
+            "toolIds": [],
+            "chamberIds": [],
+            "recipeNames": [],
+            "parameters": [],
+            "timeRange": {"start": "", "end": ""},
+            "equipmentIds": [],
+            "runIds": [run_id],
+        }
 
     alarm_count = sum(1 for e in events if e.severity in ("alarm", "critical"))
     warning_count = sum(1 for e in events if e.severity == "warning")

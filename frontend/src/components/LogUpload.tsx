@@ -11,12 +11,12 @@ interface LogUploadProps {
 
 const FORMAT_LABELS: Record<LogFormat, string> = {
   json: 'JSON', xml: 'XML', csv: 'CSV',
-  syslog: 'Syslog', text: 'Plain Text', hex: 'Binary/Hex', keyvalue: 'Key-Value',
+  syslog: 'Syslog', text: 'Plain Text', hex: 'Binary/Hex', keyvalue: 'Key-Value', kv: 'Key-Value',
 };
 
 const FORMAT_COLORS: Record<LogFormat, string> = {
   json: 'text-primary', xml: 'text-info', csv: 'text-success',
-  syslog: 'text-warning', text: 'text-secondary-foreground', hex: 'text-destructive', keyvalue: 'text-primary',
+  syslog: 'text-warning', text: 'text-secondary-foreground', hex: 'text-destructive', keyvalue: 'text-primary', kv: 'text-primary',
 };
 
 export default function LogUpload({ onParsed }: LogUploadProps) {

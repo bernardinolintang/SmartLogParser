@@ -53,6 +53,28 @@ npm run dev
 - plain text logs
 - hex/binary-like logs
 
+## Real-World Log Variation Examples
+
+These examples show why one parser is not enough in semiconductor environments. Different tools and vendors represent similar process information in very different ways.
+
+### Example A: Recipe/Process Logs in Different Styles
+
+![Dose recipe XML vs event text logs](docs/images/example-dose-xml-vs-text.png)
+
+Why this matters:
+- XML logs can be highly structured and nested.
+- Text/event logs can be line-based and semi-structured.
+- The platform must classify format first, then parse with different logic paths.
+
+### Example B: Sensor Trace Logs Across Vendors
+
+![Sensor trace variations across vendors](docs/images/example-sensor-trace-variations.png)
+
+Why this matters:
+- Even when two logs are both JSON-like, field names and nesting can differ a lot.
+- Some tools also export table-like telemetry formats.
+- Normalization is required before analytics can compare tools/chambers consistently.
+
 ## Typical User Flow
 
 ### 1) Upload or Stream

@@ -14,7 +14,7 @@ from app.models import Run, Event
 from app.services.format_detector import detect_format
 from app.services.normalization import normalize_events
 from app.services.validation import validate_events
-from app.services.llm_service import enhance_partial_events
+from app.services.llm_service import enhance_partial_events, classify_log_format_with_llm
 from app.services.deduplication import deduplicate_event_dicts
 from app.services.summary import compute_summary
 from app.parsers import (
@@ -59,6 +59,34 @@ def parse_file(content: str, filename: str, db: Session) -> dict:
     try:
         parser_fn = _PARSER_MAP.get(fmt, parse_text)
         raw_events = parser_fn(content, run_id)
+
+        # Recovery path for malformed or mislabeled files:
+        # 1) try alternate deterministic parsers, 2) ask LLM for likely format.
+        if not raw_events and content.strip():
+            logger.warning("No events parsed with detected format '%s' for %s; trying recovery", fmt, filename)
+
+            best_fmt = fmt
+            best_events = raw_events
+            for candidate_fmt, candidate_parser in _PARSER_MAP.items():
+                if candidate_fmt == fmt:
+                    continue
+                candidate_events = candidate_parser(content, run_id)
+                if len(candidate_events) > len(best_events):
+                    best_fmt = candidate_fmt
+                    best_events = candidate_events
+
+            if best_events:
+                fmt = best_fmt
+                raw_events = best_events
+                logger.info("Recovery parser selected format '%s' for %s", fmt, filename)
+            else:
+                llm_fmt = classify_log_format_with_llm(content)
+                if llm_fmt and llm_fmt in _PARSER_MAP and llm_fmt != fmt:
+                    llm_events = _PARSER_MAP[llm_fmt](content, run_id)
+                    if llm_events:
+                        fmt = llm_fmt
+                        raw_events = llm_events
+                        logger.info("LLM format classification selected '%s' for %s", fmt, filename)
 
         normalized = normalize_events(raw_events)
         validated = validate_events(normalized)

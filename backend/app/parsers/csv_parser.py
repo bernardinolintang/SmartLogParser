@@ -15,7 +15,11 @@ def parse_csv(content: str, run_id: str) -> list[dict]:
     reader = csv.DictReader(io.StringIO(content))
 
     for line_num, row in enumerate(reader, start=2):
-        lrow = {k.strip().lower(): v.strip() for k, v in row.items() if k}
+        lrow = {
+            k.strip().lower(): (v.strip() if isinstance(v, str) else "")
+            for k, v in row.items()
+            if k
+        }
         tool_id = lrow.get("equipment_id") or lrow.get("tool_id") or lrow.get("equipment") or "UNKNOWN"
         raw_val = lrow.get("value") or lrow.get("reading") or ""
         val, inferred_unit = parse_value_unit(raw_val)

@@ -36,6 +36,18 @@ Database (SQLite for MVP)
   -> run_summaries
 ```
 
+## 2.1) Why Multi-Format + Adaptive Parsing Is Required
+
+Reference examples:
+
+![Dose recipe XML vs text logs](docs/images/example-dose-xml-vs-text.png)
+
+![Sensor trace vendor variations](docs/images/example-sensor-trace-variations.png)
+
+These examples highlight two implementation realities:
+- format-level variation (XML vs event text) requires different parser pipelines.
+- schema-level variation (Vendor A vs Vendor B vs tabular export) requires normalization before any analytics.
+
 ## 3) Parsing Pipeline (Authoritative Flow)
 
 Each upload/stream batch follows this sequence:

@@ -6,7 +6,7 @@ Marks invalid events as partial rather than dropping them entirely.
 import re
 
 _ISO_LIKE = re.compile(r"\d{4}.*\d{2}.*\d{2}")
-_NUMERIC = re.compile(r"^[+-]?\d+\.?\d*$")
+_NUMERIC = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$")
 
 
 def validate_events(events: list[dict]) -> list[dict]:

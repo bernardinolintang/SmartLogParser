@@ -5,6 +5,7 @@ Example:
 """
 
 import re
+from datetime import datetime
 
 from app.utils.mappings import normalize_parameter, normalize_severity, infer_tool_type
 from app.utils.unit_parser import parse_value_unit
@@ -26,6 +27,7 @@ _CATEGORY_MAP = {
 def parse_syslog(content: str, run_id: str) -> list[dict]:
     events: list[dict] = []
     lines = content.strip().split("\n")
+    current_year = datetime.now().year
 
     for line_num, line in enumerate(lines, start=1):
         line = line.strip()
@@ -37,7 +39,7 @@ def parse_syslog(content: str, run_id: str) -> list[dict]:
             continue
 
         ts_raw, tool_id, category, rest = m.group(1), m.group(2), m.group(3), m.group(4)
-        timestamp = f"2026-{ts_raw}"
+        timestamp = f"{current_year}-{ts_raw}"
         event_type, severity = _CATEGORY_MAP.get(category, ("INFO", "info"))
         tool_type = infer_tool_type(tool_id)
 
