@@ -1,37 +1,72 @@
 # Smart Semiconductor Tool Log Parser - User Guide
 
-This guide is designed for:
+Version: 1.1  
+Last updated: 2026-03-14
 
-- hackathon judges reviewing the workflow quickly
-- engineers new to semiconductor equipment logs
-- non-software users who need to understand what happened in a run
+This guide is written for:
 
-## What This Product Does
+- non-technical users who want to understand what happens after upload
+- hackathon judges reviewing practical business value
+- new engineers onboarding to tool-log analytics workflows
 
-Semiconductor machines generate raw technical logs that are difficult to interpret directly. Smart Semiconductor Tool Log Parser ingests those logs and converts them into structured events that can be explored through dashboards.
+## Table of Contents
 
-In practical terms:
+1. [What This Product Is](#what-this-product-is)
+2. [Why This Matters in Semiconductor Manufacturing](#why-this-matters-in-semiconductor-manufacturing)
+3. [Before You Start](#before-you-start)
+4. [Quick Start](#quick-start)
+5. [Supported Log Types](#supported-log-types)
+6. [Step-by-Step: What Happens After Upload](#step-by-step-what-happens-after-upload)
+7. [How to Use Each Dashboard](#how-to-use-each-dashboard)
+8. [Golden Run and Drift Detection](#golden-run-and-drift-detection)
+9. [Streaming Simulation](#streaming-simulation)
+10. [Troubleshooting](#troubleshooting)
+11. [FAQ](#faq)
+12. [Security and Data Handling Notes](#security-and-data-handling-notes)
+13. [Glossary](#glossary)
+14. [Support and Next Steps](#support-and-next-steps)
 
-- You upload a messy machine log
-- The system identifies format and extracts events
-- You inspect health, alarms, trends, and drift from one UI
+## What This Product Is
 
-## Why It Matters in Manufacturing
+Semiconductor equipment logs are usually large, inconsistent, and difficult to read directly.  
+This product converts those raw logs into clean, structured events and visual dashboards.
 
-In fab operations, logs commonly include:
+In plain words:
 
-- timestamps
-- tool and chamber IDs
-- recipe and process step context
-- sensor readings (temperature, pressure, RF power, gas flow)
-- alarm and state transition records
+1. You upload a raw machine log.
+2. The system figures out its format.
+3. It extracts key information (tool, chamber, parameter, alarms, step, time).
+4. It shows results in dashboards for faster troubleshooting and decisions.
 
-Without structured processing, root-cause analysis is slow. This platform simulates a modern observability pipeline that reduces manual log reading and accelerates engineering decisions.
+## Why This Matters in Semiconductor Manufacturing
+
+In fab operations, a single incident can involve:
+
+- multiple tools and chambers
+- different log formats from different vendors
+- missing fields in some lines
+- alarms appearing before/after parameter drift
+
+Without structure, engineers spend time manually searching text files.  
+This platform reduces that manual work and helps teams move from "raw text" to "actionable insights."
+
+## Before You Start
+
+You need:
+
+- Node.js 18+
+- Python 3.11+
+- project `.env` configured (especially `GROQ_API_KEY` for LLM fallback)
+
+If this is your first time:
+
+1. Copy `.env.example` to `.env`
+2. Add your `GROQ_API_KEY`
+3. Keep `.env` local only (do not commit it)
 
 ## Quick Start
 
-1. Open a terminal in the project root.
-2. Run:
+From project root:
 
 ```sh
 npm install
@@ -39,206 +74,225 @@ npm --prefix frontend install
 npm run dev
 ```
 
-3. Open `http://localhost:8080`.
+Open:
 
-`npm run dev` launches both frontend and backend together.
+- Frontend: `http://localhost:8080`
+- Backend API docs: `http://localhost:8000/docs`
 
-## Supported Inputs
+`npm run dev` starts frontend and backend together.
+
+## Supported Log Types
 
 - JSON
 - XML
 - CSV
-- key-value text logs
-- syslog-style logs
+- key-value logs
+- syslog logs (including RFC-style patterns)
 - plain text logs
-- hex/binary-like logs
+- hex logs
+- binary logs (`.bin`)
 
 ## Real-World Log Variation Examples
 
-These examples show why one parser is not enough in semiconductor environments. Different tools and vendors represent similar process information in very different ways.
+These examples show why one parser is not enough in semiconductor environments.
 
-### Example A: Recipe/Process Logs in Different Styles
+### Example A: Recipe/Process logs in different styles
 
 ![Dose recipe XML vs event text logs](docs/images/example-dose-xml-vs-text.png)
 
-Why this matters:
-- XML logs can be highly structured and nested.
-- Text/event logs can be line-based and semi-structured.
-- The platform must classify format first, then parse with different logic paths.
-
-### Example B: Sensor Trace Logs Across Vendors
+### Example B: Sensor traces across vendors
 
 ![Sensor trace variations across vendors](docs/images/example-sensor-trace-variations.png)
 
-Why this matters:
-- Even when two logs are both JSON-like, field names and nesting can differ a lot.
-- Some tools also export table-like telemetry formats.
-- Normalization is required before analytics can compare tools/chambers consistently.
+## Step-by-Step: What Happens After Upload
 
-## Typical User Flow
+This section explains each processing stage and why it exists.
 
-### 1) Upload or Stream
+### Step 1 - Upload and run creation
 
-In the `Upload` tab, drag-and-drop a log file or select a sample log. You can also use streaming mode to simulate live telemetry.
+- A unique `run_id` is created for each upload.
+- The file is validated and safely stored.
 
-### 2) Processing Pipeline
+Why: all events and dashboards must be tied to one consistent session.
 
-This is what the platform is doing under the hood, stage-by-stage:
+### Step 2 - Format detection
 
-1. **Run Creation**
-   - Every upload creates a unique `run_id`.
-   - This keeps all events, summaries, and comparisons grouped by one processing session.
+- The backend inspects content patterns and bytes (not extension alone).
+- It outputs format + confidence (for example: `syslog`, `0.82`).
 
-2. **Format Detection**
-   - The backend inspects content patterns (not filename alone).
-   - It classifies logs as JSON, XML, CSV, key-value, syslog, text, or hex.
-   - Why this matters: each format has a dedicated parser for better accuracy.
+Why: different formats require different parsers.
 
-3. **Parser Routing**
-   - The file is sent to the matching parser path.
-   - Structured formats use deterministic extraction rules first.
-   - Why this matters: deterministic parsing is fast, cheap, and predictable.
+### Step 3 - Parser routing
 
-4. **Deterministic Parsing**
-   - The parser extracts fields like timestamp, tool/chamber, recipe step, parameter, value, and alarms.
-   - For example, `TEMP_C`, `Temperature`, and `temp` are all detected as sensor readings.
-   - Why this matters: core fab data is converted from raw text into machine-readable events.
+- The file is routed to a specific parser path.
+- Structured logs use deterministic parser logic first.
 
-5. **LLM Fallback (Only If Needed)**
-   - If a row is ambiguous or partially parsed, only those rows are sent to Groq.
-   - The LLM is constrained to output strict JSON schema fields.
-   - Why this matters: you get flexibility for messy logs without using LLM on every line.
+Why: deterministic parsing is fast and reproducible.
 
-6. **Normalization**
-   - Vendor-specific names are mapped to canonical names:
-     - `TEMP_C -> temperature`
-     - `PRESSURE_TORR -> pressure`
-     - `RFPOWER -> rf_power`
-   - Event labels and severity are also standardized.
-   - Why this matters: cross-vendor comparison becomes possible.
+### Step 4 - Data extraction
 
-7. **Validation**
-   - The system validates timestamp shape, numeric parameter rows, and schema consistency.
-   - Invalid/uncertain rows are marked `parse_status=partial` instead of crashing the run.
-   - Why this matters: robust processing even with imperfect logs.
+The parser extracts:
 
-8. **Storage and Summary**
-   - Structured events are stored by `run_id` in the backend database.
-   - Summary metrics (alarm count, warnings, ranges, time windows) are computed.
-   - Why this matters: dashboards load quickly and stay consistent.
+- timestamp
+- tool/chamber context
+- recipe/step
+- parameter and value
+- alarms and severity clues
+- original raw line for traceability
 
-### 3) Review Dashboards
+Why: raw strings become machine-readable events.
 
-Use the left navigation to explore insights:
+### Step 5 - Recovery and fallback
 
-- `Overview` - run-level status snapshot
-- `Health` - tool condition and chamber-level behavior
-- `Data` - structured event table with searchable fields
-- `Analytics` / `Trends` - time series and distributions
-- `Recipe` - process timeline and step sequence
-- `Alarms` / `Anomaly` - issue-focused investigation
-- `Golden Run` - baseline comparison for drift
-- `Raw Log` - side-by-side traceability
-- `Report` - shareable engineering summary
-- `Architecture` - end-to-end data flow explanation
+If parse result is weak or empty:
 
-## What Each Dashboard Is For (Fab Workflow View)
+- the service tries alternative deterministic parsers
+- if still uncertain, it can use LLM-assisted classification/enhancement
 
-From an equipment/process engineering perspective:
+Why: imperfect files should still produce useful output.
 
-- **Overview**
-  - First triage screen.
-  - Confirms run volume, active alarms, tool/chamber scope, and time coverage.
+### Step 6 - Normalization
 
-- **Health**
-  - Operational stability snapshot.
-  - Useful when determining if issue is isolated to one chamber or systemic.
+Vendor aliases are standardized:
 
-- **Data**
-  - Truth table for parsed events.
-  - Use this when you need exact event rows for RCA notes or handoff.
+- `TEMP_C`, `Temp`, `temperature` -> `temperature`
+- `PRESSURE_TORR`, `Pressure` -> `pressure`
+- `RFPOWER`, `rf_power_w` -> `rf_power`
 
-- **Analytics / Trends**
-  - Parameter behavior through time.
-  - Best for identifying drift, oscillation, sudden jumps, and pre-alarm signatures.
+Why: comparisons only work when names are consistent.
 
-- **Recipe**
-  - Sequence-level visibility (`STEP_START`, `STEP_END`, transitions).
-  - Helps verify whether excursions align with specific process steps.
+### Step 7 - Validation
 
-- **Alarms / Anomaly**
-  - Incident-focused exploration.
-  - Helps isolate root events and surrounding machine state changes.
+Rows are validated for schema and data quality.  
+Uncertain rows are marked as partial instead of crashing the run.
 
-- **Golden Run**
-  - Baseline-vs-current comparison.
-  - Useful for detecting subtle drift before hard alarm thresholds are crossed.
+Why: robust system behavior even with missing information.
 
-- **Raw Log**
-  - Source traceability.
-  - Critical for auditability: verify what parser interpreted vs original text.
+### Step 8 - Deduplication
 
-- **Report**
-  - Compact output for shift handoff, review meetings, or judge demos.
+Duplicate events are dropped within the run scope.
 
-## Alarm Investigation Workflow
+Why: repeated/replayed lines should not inflate charts or alarm counts.
 
-Recommended workflow for incident analysis:
+### Step 9 - Storage and summary
 
-1. Open `Alarms` and select the alarm event.
-2. Inspect surrounding events in timeline order.
-3. Check `Trends` for pre-alarm parameter shifts.
-4. Compare against a stable baseline in `Golden Run`.
-5. Use `Raw Log` to validate parser interpretation.
+- Events are saved to database tables.
+- Summary metrics are computed for dashboards.
 
-## Recommended Engineering Investigation Sequence
+Why: queries become fast and repeatable.
 
-If you are debugging a process incident:
+### Step 10 - Dashboard and API output
 
-1. Start in `Overview` to scope blast radius (how many alarms, which tool/chamber).
-2. Move to `Alarms` and pick the first critical or earliest alarm.
-3. Use `Timeline`/`Recipe` to locate the exact process step around alarm onset.
-4. Open `Trends` for key parameters (`temperature`, `pressure`, `rf_power`, `gas_flow`).
-5. Compare with `Golden Run` to quantify deviation.
-6. Validate suspicious lines in `Raw Log`.
-7. Export structured data for downstream reporting if needed.
+The frontend receives:
 
-## Golden Run Comparison
+- parsed events
+- format label and confidence
+- summary cards
+- trend/timeline data
+
+Why: users see outcomes quickly without reading raw logs manually.
+
+## How to Use Each Dashboard
+
+Use this workflow from left to right:
+
+- **Overview:** first triage screen (status, alarm volume, run scope)
+- **Data:** detailed event table for exact row-level verification
+- **Trends / Analytics:** parameter behavior over time
+- **Recipe / Timeline:** step-by-step process progression
+- **Alarms / Anomaly:** incident-focused investigation
+- **Health:** tool/chamber stability snapshot
+- **Golden Run:** baseline comparison for drift
+- **Raw Log:** source traceability
+- **Report:** shareable summary for handoff and reviews
+- **Architecture:** visual explanation of pipeline
+
+## Golden Run and Drift Detection
 
 Use a known stable run as baseline:
 
-- mark baseline as golden
-- compare current run to baseline
-- inspect parameter deviation and severity
+1. Mark baseline run as golden.
+2. Compare current run against golden.
+3. Review deviations by parameter/tool/chamber.
+4. Investigate high-deviation items in Trends + Raw Log.
 
-This is useful for early detection of process drift before full yield impact.
+Why this is valuable: drift often appears before hard alarm thresholds.
 
-## Real-Time Streaming Simulation
+## Streaming Simulation
 
-The system supports incremental log ingestion:
+For near-real-time behavior:
 
-- start stream session
-- append new lines in batches
-- parse and update run state continuously
-- finish stream and lock summary
+1. Start stream session
+2. Append log chunks periodically
+3. Parse and merge continuously
+4. Finish stream and lock final status
 
-This models real fab telemetry ingestion behavior.
-
-## Security Notes (User-Facing)
-
-- Uploads are treated as untrusted input.
-- Only allowed file types are accepted.
-- Large files are rejected by size policy.
-- Parsed outputs are schema-validated before visualization.
-- Secrets (API keys) remain backend-only.
+This simulates continuous fab telemetry ingestion.
 
 ## Troubleshooting
 
-- **No backend connection:** run `npm run dev` from project root.
-- **Upload rejected:** verify file extension/size constraints.
-- **Empty charts:** check if the run contains parameter-reading events.
-- **Unexpected values:** inspect `Raw Log` for source traceability.
+- **UI cannot load data**
+  - Confirm `npm run dev` is running in project root.
+  - Check backend docs page at `http://localhost:8000/docs`.
 
-## Practical Takeaway
+- **Upload rejected**
+  - Verify extension is allowed and file is within size limit.
 
-Smart Semiconductor Tool Log Parser converts heterogeneous, vendor-specific tool logs into structured operational intelligence for faster and safer process decisions.
+- **Unexpected blank/empty charts**
+  - Check if parsed run has parameter-reading events.
+  - Confirm selected filters are not too restrictive.
+
+- **Values look wrong**
+  - Inspect `Raw Log` and compare with `Data` row values.
+  - Look for unit and naming differences from source vendor.
+
+- **Run has partial rows**
+  - This is expected for missing/ambiguous lines.
+  - Continue investigation with available complete rows and context.
+
+## FAQ
+
+### Q1: What if my file has missing fields?
+The system does not fail the entire run. It keeps processable rows, marks uncertain rows as partial, and continues.
+
+### Q2: Does the system use LLM for every line?
+No. Deterministic parsing is primary. LLM is used selectively for ambiguous/partial cases.
+
+### Q3: Can I compare two runs?
+Yes. Use Golden Run comparison and drift views.
+
+### Q4: How do I verify parser correctness?
+Use `Raw Log` + `Data` table side-by-side and check exact mapped values.
+
+### Q5: Can I test without real fab logs?
+Yes. Use synthetic endpoints from backend for demo data generation.
+
+## Security and Data Handling Notes
+
+- Uploads are treated as untrusted input.
+- Only approved file types are accepted.
+- File size limits are enforced.
+- XML parsing uses safe configuration.
+- API keys stay on backend (`.env`), not frontend.
+- Raw lines are preserved for audit traceability.
+
+## Glossary
+
+- **Run:** one upload/processing session with its own `run_id`.
+- **Event:** one structured record extracted from raw log content.
+- **Normalization:** mapping vendor-specific names into canonical names.
+- **Partial row:** a row with missing/uncertain fields kept for context.
+- **Golden run:** a known-good baseline used for drift comparison.
+- **Drift:** measurable deviation from baseline process behavior.
+
+## Support and Next Steps
+
+Recommended first-time usage path:
+
+1. Upload sample/synthetic file.
+2. Open Overview and Data.
+3. Check Trends for `temperature`, `pressure`, `rf_power`, `gas_flow`.
+4. Review Alarms, then compare with Golden Run.
+5. Validate key findings using Raw Log.
+
+Practical outcome: faster root-cause analysis and clearer process communication.

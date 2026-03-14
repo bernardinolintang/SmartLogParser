@@ -27,14 +27,6 @@ This project demonstrates exactly that workflow.
 - Golden-run baseline comparison and drift detection
 - Simulated real-time streaming ingestion
 
-## Real Log Variation (Visual Examples)
-
-These examples (from your presentation research) illustrate why adaptive multi-format parsing is necessary in semiconductor manufacturing:
-
-![Dose recipe XML and text event logs](docs/images/example-dose-xml-vs-text.png)
-
-![Sensor trace variation across vendors](docs/images/example-sensor-trace-variations.png)
-
 ## End-to-End Architecture
 
 ```
