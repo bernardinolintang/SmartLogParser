@@ -27,7 +27,7 @@ def parse_kv(content: str, run_id: str) -> list[dict]:
 
         pairs: dict[str, str] = {}
         for m in _KV_PATTERN.finditer(line):
-            key = m.group(1)
+            key = m.group(1).lower()
             val = m.group(2).strip('"')
             pairs[key] = val
 

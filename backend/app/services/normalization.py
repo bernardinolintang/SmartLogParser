@@ -1,6 +1,13 @@
 """Post-parse normalization: standardize names, units, event types, severity."""
 
-from app.utils.mappings import normalize_parameter, normalize_event_type, normalize_severity, infer_tool_type
+from app.utils.mappings import (
+    normalize_parameter,
+    normalize_event_type,
+    normalize_severity,
+    normalize_alarm_code,
+    infer_severity_from_alarm_code,
+    infer_tool_type,
+)
 
 
 def normalize_events(events: list[dict]) -> list[dict]:
@@ -13,6 +20,14 @@ def normalize_events(events: list[dict]) -> list[dict]:
 
         if e.get("severity"):
             e["severity"] = normalize_severity(e["severity"])
+
+        if e.get("alarm_code"):
+            e["alarm_code"] = normalize_alarm_code(e["alarm_code"])
+            # If severity is weak/unknown, derive it from alarm code.
+            if e.get("severity") in (None, "", "info"):
+                inferred = infer_severity_from_alarm_code(e.get("alarm_code"))
+                if inferred:
+                    e["severity"] = inferred
 
         if e.get("tool_id") and not e.get("tool_type"):
             e["tool_type"] = infer_tool_type(e["tool_id"])

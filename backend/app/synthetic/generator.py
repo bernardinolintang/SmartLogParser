@@ -30,8 +30,12 @@ ALARM_ID = {a: i + 1 for i, a in enumerate(ALARMS)}
 def _records(n: int = 80) -> list[dict]:
     now = datetime.now(tz=timezone.utc) - timedelta(minutes=20)
     recs: list[dict] = []
+    ts_cursor = now
     for i in range(n):
-        ts = now + timedelta(seconds=15 * i)
+        # Mixed cadence to emulate real fab behavior: mostly sampled with occasional event-driven bursts.
+        step_seconds = random.choice([1, 1, 2, 5, 15, 30])
+        ts_cursor = ts_cursor + timedelta(seconds=step_seconds)
+        ts = ts_cursor
         tool = random.choice(TOOLS)
         chamber = random.choice(CHAMBERS)
         recipe = random.choice(RECIPES)
@@ -44,6 +48,8 @@ def _records(n: int = 80) -> list[dict]:
                 "timestamp": ts.isoformat(),
                 "tool_id": tool,
                 "chamber_id": chamber,
+                "lot_id": f"LOT_{random.randint(100, 999)}",
+                "wafer_id": f"WAFER_{random.randint(1, 25):02d}",
                 "recipe_name": recipe,
                 "recipe_step": random.choice(["PumpDown", "Stabilize", "Process", "CoolDown"]),
                 "event_type": "ALARM" if alarm else "PARAMETER_READING",
@@ -64,6 +70,8 @@ def generate_json() -> str:
             {
                 "ToolID": r["tool_id"],
                 "ChamberID": r["chamber_id"],
+                "LotID": r["lot_id"],
+                "WaferID": r["wafer_id"],
                 "RecipeName": r["recipe_name"],
                 "Timestamp": r["timestamp"],
                 "event_type": r["event_type"],
@@ -91,10 +99,10 @@ def generate_xml() -> str:
 
 def generate_csv() -> str:
     rows = _records(80)
-    lines = ["timestamp,equipment_id,chamber_id,parameter,value,unit,step_id,recipe_name,run_id,event_type,severity,alarm_code"]
+    lines = ["timestamp,equipment_id,chamber_id,lot_id,wafer_id,parameter,value,unit,step_id,recipe_name,run_id,event_type,severity,alarm_code"]
     for r in rows:
         lines.append(
-            f'{r["timestamp"]},{r["tool_id"]},{r["chamber_id"]},{r["parameter"]},{r["value"]},{r["unit"]},{r["recipe_step"]},{r["recipe_name"]},RUN_SYNTH_001,{r["event_type"]},{r["severity"]},{r["alarm_code"] or ""}'
+            f'{r["timestamp"]},{r["tool_id"]},{r["chamber_id"]},{r["lot_id"]},{r["wafer_id"]},{r["parameter"]},{r["value"]},{r["unit"]},{r["recipe_step"]},{r["recipe_name"]},RUN_SYNTH_001,{r["event_type"]},{r["severity"]},{r["alarm_code"] or ""}'
         )
     return "\n".join(lines)
 
@@ -104,7 +112,7 @@ def generate_kv() -> str:
     lines = []
     for r in rows:
         lines.append(
-            f'timestamp={r["timestamp"]} tool_id={r["tool_id"]} chamber_id={r["chamber_id"]} recipe_name={r["recipe_name"]} step={r["recipe_step"]} {r["parameter"]}={r["value"]}{r["unit"]} alarm={r["alarm_code"] or "none"}'
+            f'timestamp={r["timestamp"]} tool_id={r["tool_id"]} chamber_id={r["chamber_id"]} lot_id={r["lot_id"]} wafer_id={r["wafer_id"]} recipe_name={r["recipe_name"]} step={r["recipe_step"]} {r["parameter"]}={r["value"]}{r["unit"]} alarm={r["alarm_code"] or "none"}'
         )
     return "\n".join(lines)
 
