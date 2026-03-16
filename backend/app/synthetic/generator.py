@@ -6,8 +6,27 @@ import json
 import random
 import struct
 import time
+import pathlib
 from datetime import datetime, timedelta, timezone
 
+# Path to the sample_logs directory (two levels up from this file: app/synthetic/ -> app/ -> backend/ -> sample_logs/)
+_SAMPLE_LOGS_DIR = pathlib.Path(__file__).parent.parent.parent / "sample_logs"
+
+
+def _read_sample(filename: str) -> str:
+    """Return the contents of a file in sample_logs/, or empty string if missing."""
+    path = _SAMPLE_LOGS_DIR / filename
+    if path.exists():
+        return path.read_text(encoding="utf-8")
+    return ""
+
+
+def _read_sample_bytes(filename: str) -> bytes:
+    """Return the raw bytes of a file in sample_logs/, or empty bytes if missing."""
+    path = _SAMPLE_LOGS_DIR / filename
+    if path.exists():
+        return path.read_bytes()
+    return b""
 
 TOOLS = ["DRY_ETCH_001", "DRY_ETCH_002", "EUV_SCANNER_001", "CVD_TOOL_001", "CMP_TOOL_001"]
 CHAMBERS = ["C1", "C2", "C3", "C4"]
@@ -64,6 +83,9 @@ def _records(n: int = 80) -> list[dict]:
 
 
 def generate_json() -> str:
+    sample = _read_sample("plasma_etch_01.json")
+    if sample:
+        return sample
     out = []
     for r in _records(60):
         out.append(
@@ -85,6 +107,9 @@ def generate_json() -> str:
 
 
 def generate_xml() -> str:
+    sample = _read_sample("cvd_deposition_01.xml")
+    if sample:
+        return sample
     rows = _records(50)
     head = '<Log EquipmentID="EUV_SCANNER_001" RecipeID="PHOTO_STEP_3" ChamberID="C1">\n'
     body = ""
@@ -98,6 +123,9 @@ def generate_xml() -> str:
 
 
 def generate_csv() -> str:
+    sample = _read_sample("pvd_sputter_01.csv")
+    if sample:
+        return sample
     rows = _records(80)
     lines = ["timestamp,equipment_id,chamber_id,lot_id,wafer_id,parameter,value,unit,step_id,recipe_name,run_id,event_type,severity,alarm_code"]
     for r in rows:
@@ -108,6 +136,9 @@ def generate_csv() -> str:
 
 
 def generate_kv() -> str:
+    sample = _read_sample("ald_tool_01.kv")
+    if sample:
+        return sample
     rows = _records(70)
     lines = []
     for r in rows:
@@ -118,6 +149,9 @@ def generate_kv() -> str:
 
 
 def generate_syslog() -> str:
+    sample = _read_sample("euv_scanner_02.log")
+    if sample:
+        return sample
     rows = _records(70)
     lines = []
     for r in rows:
@@ -155,4 +189,7 @@ def generate_binary() -> bytes:
 
 
 def generate_hex() -> str:
+    sample = _read_sample("etch_tool_06_binary.hex")
+    if sample:
+        return sample
     return generate_binary().hex(" ")
