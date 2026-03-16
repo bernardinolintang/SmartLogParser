@@ -183,6 +183,12 @@ backend/app/
 - `GET /api/runs/{run_id}/download/csv`
 - `GET /api/runs/{run_id}/download/json`
 
+### BI integrations
+
+- `GET /api/bi/events`
+- `GET /api/bi/timeseries`
+- `GET /api/bi/kpis`
+
 ## 10) Frontend Integration Notes
 
 Frontend entry points:

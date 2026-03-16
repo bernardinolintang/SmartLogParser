@@ -9,3 +9,4 @@ groq==0.15.0
 pandas==2.2.3
 defusedxml==0.7.1
 aiofiles==24.1.0
+psycopg[binary]==3.2.9

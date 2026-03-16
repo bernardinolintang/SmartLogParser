@@ -212,6 +212,25 @@ Missing values are represented as `null`/empty based on parser context, then nor
 - `POST /api/stream/append`
 - `POST /api/stream/finish`
 - `GET /api/synthetic/{format_type}` (`json|xml|csv|kv|syslog|text|binary|hex`)
+- `GET /api/bi/events`
+- `GET /api/bi/timeseries`
+- `GET /api/bi/kpis`
+
+## External Dashboard Integration
+
+Pipeline:
+
+`Parser -> database -> BI tool`
+
+Supported phase-1 integrations:
+
+- Grafana: PostgreSQL SQL datasource + starter queries in `docs/grafana_starter_queries.sql`
+- Tableau: direct PostgreSQL connector or REST pull from `/api/bi/*`
+- Power BI: direct PostgreSQL connector or REST ingestion from `/api/bi/*`
+
+Recommended production `DATABASE_URL`:
+
+- `postgresql+psycopg://<user>:<password>@<host>:5432/<db_name>`
 
 Notable parser updates:
 
