@@ -1,5 +1,9 @@
 """Canonical name mappings for cross-vendor normalization."""
 
+from __future__ import annotations
+
+import re
+
 PARAMETER_MAP: dict[str, str] = {
     "temp": "temperature",
     "Temp": "temperature",
@@ -36,6 +40,10 @@ PARAMETER_MAP: dict[str, str] = {
     "humidity": "humidity",
     "vibration": "vibration",
     "wavelength": "wavelength",
+}
+
+_NORMALIZED_PARAMETER_MAP: dict[str, str] = {
+    re.sub(r"[^a-z0-9]+", "_", k.strip().lower()).strip("_"): v for k, v in PARAMETER_MAP.items()
 }
 
 
@@ -85,6 +93,18 @@ ALARM_SEVERITY: dict[str, str] = {
     "OVER_TEMP": "alarm",
 }
 
+ALARM_CODE_MAP: dict[str, str] = {
+    "VACUUM_FAILURE": "VACUUM_FAULT",
+    "VAC_FAIL": "VACUUM_FAULT",
+    "VAC_FAULT": "VACUUM_FAULT",
+    "LOW_PRESSURE": "PRESSURE_LOW",
+    "PRESS_LOW": "PRESSURE_LOW",
+    "TEMP_SPIKE": "TEMP_HIGH",
+    "OVER_TEMP": "TEMP_HIGH",
+    "RF_POWER_FAULT": "RF_INTERLOCK",
+    "RF_FAULT": "RF_INTERLOCK",
+}
+
 
 TOOL_TYPE_KEYWORDS: dict[str, str] = {
     "etch": "etch",
@@ -102,9 +122,34 @@ TOOL_TYPE_KEYWORDS: dict[str, str] = {
 
 
 def normalize_parameter(name: str) -> str:
-    if name in PARAMETER_MAP:
-        return PARAMETER_MAP[name]
-    return name.lower().replace(" ", "_")
+    raw = (name or "").strip()
+    if not raw:
+        return "value"
+
+    if raw in PARAMETER_MAP:
+        return PARAMETER_MAP[raw]
+
+    norm = re.sub(r"[^a-z0-9]+", "_", raw.lower()).strip("_")
+    if norm in _NORMALIZED_PARAMETER_MAP:
+        return _NORMALIZED_PARAMETER_MAP[norm]
+
+    # Handle indexed and vendor-varied names, e.g. temp1/temp_2/t_sensor/p_chamber.
+    if re.match(r"^t(emp(erature)?)?(_?sensor)?_?\d*$", norm) or "chamber_temp" in norm:
+        return "temperature"
+    if (
+        norm.startswith("press")
+        or "pressure" in norm
+        or re.match(r"^p(_?chamber)?_?\d*$", norm)
+    ):
+        return "pressure"
+    if ("rf" in norm and "power" in norm) or norm.startswith("rfp"):
+        return "rf_power"
+    if "gas" in norm and "flow" in norm:
+        return "gas_flow"
+    if norm.startswith("pedestal_power") or norm == "ped_power":
+        return "pedestal_power"
+
+    return norm
 
 
 def normalize_event_type(raw: str) -> str:
@@ -115,6 +160,20 @@ def normalize_event_type(raw: str) -> str:
 
 def normalize_severity(raw: str) -> str:
     return SEVERITY_MAP.get(raw, "info")
+
+
+def normalize_alarm_code(code: str | None) -> str | None:
+    if not code:
+        return None
+    norm = re.sub(r"[^A-Z0-9]+", "_", code.upper()).strip("_")
+    return ALARM_CODE_MAP.get(norm, norm)
+
+
+def infer_severity_from_alarm_code(code: str | None) -> str | None:
+    normalized = normalize_alarm_code(code)
+    if not normalized:
+        return None
+    return ALARM_SEVERITY.get(normalized)
 
 
 def infer_tool_type(tool_id: str) -> str:

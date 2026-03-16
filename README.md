@@ -27,6 +27,14 @@ This project demonstrates exactly that workflow.
 - Golden-run baseline comparison and drift detection
 - Simulated real-time streaming ingestion
 
+## Operational Assumptions (Hackathon Baseline)
+
+- Logs may be tool-level only, or include chamber and recipe-step context.
+- `lot_id` and `wafer_id` are treated as first-class fields when present.
+- Cadence varies by source; summary infers an approximate median sampling interval.
+- Alarm codes are vendor-specific at input and normalized to canonical internal codes.
+- Teams can run batch processing after runs, with optional stream simulation for live monitoring.
+
 ## End-to-End Architecture
 
 ```

@@ -1,5 +1,7 @@
 """Compute summary metrics for a parsed run."""
 
+from datetime import datetime
+from statistics import median
 from sqlalchemy.orm import Session
 
 from app.models import Event, RunSummary
@@ -24,6 +26,10 @@ def compute_summary(db: Session, run_id: str) -> dict:
             "timeRange": {"start": "", "end": ""},
             "equipmentIds": [],
             "runIds": [run_id],
+            "cadence": {
+                "medianIntervalMs": None,
+                "type": "unknown",
+            },
         }
 
     alarm_count = sum(1 for e in events if e.severity in ("alarm", "critical"))
@@ -42,6 +48,7 @@ def compute_summary(db: Session, run_id: str) -> dict:
     chamber_ids = sorted(set(e.chamber_id for e in events if e.chamber_id))
     recipe_names = sorted(set(e.recipe_name for e in events if e.recipe_name))
     parameters = sorted(set(e.parameter for e in events if e.parameter))
+    cadence_ms, cadence_type = _infer_cadence(events)
 
     summary = RunSummary(
         run_id=run_id,
@@ -89,4 +96,57 @@ def compute_summary(db: Session, run_id: str) -> dict:
         },
         "equipmentIds": tool_ids,
         "runIds": [run_id],
+        "cadence": {
+            "medianIntervalMs": cadence_ms,
+            "type": cadence_type,
+        },
     }
+
+
+def _infer_cadence(events: list[Event]) -> tuple[float | None, str]:
+    parsed = [_parse_ts(e.timestamp) for e in events if e.timestamp]
+    parsed = [p for p in parsed if p is not None]
+    if len(parsed) < 2:
+        return None, "unknown"
+
+    parsed.sort()
+    deltas_ms: list[float] = []
+    for i in range(1, len(parsed)):
+        delta = (parsed[i] - parsed[i - 1]).total_seconds() * 1000.0
+        if delta > 0:
+            deltas_ms.append(delta)
+
+    if not deltas_ms:
+        return None, "unknown"
+
+    med = round(float(median(deltas_ms)), 2)
+    if med <= 200:
+        cadence_type = "high_frequency"
+    elif med <= 2000:
+        cadence_type = "near_realtime"
+    elif med <= 60000:
+        cadence_type = "sampled"
+    else:
+        cadence_type = "event_driven"
+    return med, cadence_type
+
+
+def _parse_ts(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    raw = value.strip()
+    if not raw:
+        return None
+
+    # Common format from syslog parser: "YYYY-Mon DD HH:MM:SS"
+    for fmt in ("%Y-%b %d %H:%M:%S",):
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            pass
+
+    # ISO variants (including Z suffix)
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
