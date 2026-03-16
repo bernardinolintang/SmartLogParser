@@ -1,0 +1,22 @@
+Mar 10 11:00:00 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load event=STEP_START msg="Wafer loaded onto chuck"
+Mar 10 11:00:05 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load parameter=temperature value=22.1 unit=C alarm_code=None
+Mar 10 11:00:10 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load parameter=pressure value=0.9 unit=Torr alarm_code=None
+Mar 10 11:00:20 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load event=STEP_END msg="Wafer load complete. Vacuum seal confirmed."
+Mar 10 11:00:21 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align event=STEP_START msg="Reticle alignment sequence initiated"
+Mar 10 11:00:35 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align parameter=temperature value=22.3 unit=C alarm_code=None
+Mar 10 11:00:50 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align parameter=pressure value=0.85 unit=Torr alarm_code=None
+Mar 10 11:01:10 EUV_SCAN_02 ALARM[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align parameter=pressure value=1.4 unit=Torr alarm_code=ALM_PRESS_DRIFT_011 severity=WARNING msg="Reticle chamber pressure drifting above nominal"
+Mar 10 11:01:20 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align event=STEP_END msg="Alignment complete. Overlay error within spec."
+Mar 10 11:01:21 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure event=STEP_START msg="EUV exposure step started. Source on."
+Mar 10 11:01:30 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=rf_power value=480.0 unit=W alarm_code=None
+Mar 10 11:01:45 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=temperature value=23.0 unit=C alarm_code=None
+Mar 10 11:02:00 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=gas_flow value=55.0 unit=sccm alarm_code=None
+Mar 10 11:02:15 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=pressure value=0.88 unit=Torr alarm_code=None
+Mar 10 11:02:30 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=rf_power value=483.2 unit=W alarm_code=None
+Mar 10 11:02:45 EUV_SCAN_02 ALARM[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=rf_power value=540.1 unit=W alarm_code=ALM_RF_OVERPWR_002 severity=WARNING msg="Source power transient spike detected"
+Mar 10 11:03:00 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=rf_power value=479.8 unit=W alarm_code=None
+Mar 10 11:03:15 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=temperature value=22.8 unit=C alarm_code=None
+Mar 10 11:03:30 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure event=STEP_END msg="Exposure complete. Dose confirmed within spec."
+Mar 10 11:03:31 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Unload event=STEP_START msg="Wafer unload sequence initiated"
+Mar 10 11:03:45 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Unload parameter=pressure value=760.0 unit=Torr alarm_code=None
+Mar 10 11:04:00 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Unload event=STEP_END msg="Wafer unload complete. Robot transfer ready."
