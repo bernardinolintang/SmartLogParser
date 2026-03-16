@@ -428,6 +428,117 @@ timestamp=2026-03-05T11:30:25 equipment_id=METRO_TOOL_01 measurement=thickness v
 
     'binary_hex.log': `45 54 43 48 5F 54 4F 4F 4C 5F 30 36 20 54 45 4D 50 3D 31 32 30 43 20 50 52 45 53 53 3D 30 2E 38 54`,
 
+    'plasma_etch_01.json': JSON.stringify([
+      { timestamp: "2026-03-10T08:00:01Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Pump Down", event_type: "STEP_START", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Step Pump Down initiated" },
+      { timestamp: "2026-03-10T08:00:15Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Pump Down", event_type: "PARAMETER_READING", parameter: "pressure", value: 743.2, unit: "Torr", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:00:30Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Pump Down", event_type: "PARAMETER_READING", parameter: "temperature", value: 24.8, unit: "C", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:02:05Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Pump Down", event_type: "STEP_END", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Pump Down complete. Base pressure reached." },
+      { timestamp: "2026-03-10T08:02:06Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Gas Stabilization", event_type: "STEP_START", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Step Gas Stabilization initiated" },
+      { timestamp: "2026-03-10T08:02:20Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Gas Stabilization", event_type: "PARAMETER_READING", parameter: "gas_flow", value: 185.0, unit: "sccm", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:02:35Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Gas Stabilization", event_type: "PARAMETER_READING", parameter: "pressure", value: 0.48, unit: "Torr", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:04:00Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Gas Stabilization", event_type: "STEP_END", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Gas flow stabilized" },
+      { timestamp: "2026-03-10T08:04:01Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Plasma Strike", event_type: "STEP_START", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "RF power ramping for plasma ignition" },
+      { timestamp: "2026-03-10T08:04:10Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Plasma Strike", event_type: "PARAMETER_READING", parameter: "rf_power", value: 320.5, unit: "W", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:04:22Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Plasma Strike", event_type: "ALARM", parameter: "rf_power", value: 612.0, unit: "W", alarm_code: "ALM_RF_OVERPWR_001", severity: "WARNING", message: "RF power exceeded setpoint threshold during strike" },
+      { timestamp: "2026-03-10T08:06:00Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Main Etch", event_type: "STEP_START", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Main Etch step commenced" },
+      { timestamp: "2026-03-10T08:06:15Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Main Etch", event_type: "PARAMETER_READING", parameter: "rf_power", value: 490.0, unit: "W", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:06:30Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Main Etch", event_type: "PARAMETER_READING", parameter: "pressure", value: 0.77, unit: "Torr", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:06:45Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Main Etch", event_type: "PARAMETER_READING", parameter: "gas_flow", value: 342.1, unit: "sccm", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:07:00Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Main Etch", event_type: "PARAMETER_READING", parameter: "temperature", value: 121.5, unit: "C", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:14:00Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Main Etch", event_type: "STEP_END", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Main Etch complete. Endpoint detected." },
+      { timestamp: "2026-03-10T08:14:01Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Cool Down", event_type: "STEP_START", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Cool Down step initiated. RF off." },
+      { timestamp: "2026-03-10T08:15:30Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Cool Down", event_type: "PARAMETER_READING", parameter: "temperature", value: 65.2, unit: "C", alarm_code: null, severity: null, message: null },
+      { timestamp: "2026-03-10T08:18:00Z", tool_id: "ETCH_TOOL_03", chamber_id: "CH_A", recipe_name: "RCP_POLYETCH_05", recipe_step: "Cool Down", event_type: "STEP_END", parameter: null, value: null, unit: null, alarm_code: null, severity: null, message: "Cool Down complete. Wafer transfer enabled." },
+    ], null, 2),
+
+    'pvd_sputter_01.csv': `timestamp,tool_id,chamber_id,recipe_name,recipe_step,event_type,parameter,value,unit,alarm_code,severity,message
+2026-03-10T10:00:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pump Down,STEP_START,,,,,,Pump Down initiated
+2026-03-10T10:00:15Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pump Down,PARAMETER_READING,pressure,750.0,Torr,,,
+2026-03-10T10:00:30Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pump Down,PARAMETER_READING,temperature,22.5,C,,,
+2026-03-10T10:01:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pump Down,PARAMETER_READING,pressure,120.4,Torr,,,
+2026-03-10T10:01:30Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pump Down,PARAMETER_READING,pressure,1.2,Torr,,,
+2026-03-10T10:02:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pump Down,PARAMETER_READING,pressure,0.005,Torr,,,
+2026-03-10T10:02:10Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pump Down,STEP_END,,,,,,Base pressure achieved
+2026-03-10T10:02:11Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Ar Backfill,STEP_START,,,,,,Argon backfill for sputter atmosphere
+2026-03-10T10:02:25Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Ar Backfill,PARAMETER_READING,gas_flow,150.0,sccm,,,
+2026-03-10T10:03:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Ar Backfill,PARAMETER_READING,gas_flow,152.3,sccm,,,
+2026-03-10T10:03:20Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Ar Backfill,STEP_END,,,,,,Ar flow stable
+2026-03-10T10:03:21Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pre-Sputter,STEP_START,,,,,,Target conditioning pre-sputter initiated
+2026-03-10T10:03:35Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pre-Sputter,PARAMETER_READING,rf_power,100.0,W,,,
+2026-03-10T10:04:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pre-Sputter,PARAMETER_READING,temperature,45.1,C,,,
+2026-03-10T10:04:30Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pre-Sputter,PARAMETER_READING,rf_power,600.0,W,,,
+2026-03-10T10:05:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Pre-Sputter,STEP_END,,,,,,Pre-sputter complete
+2026-03-10T10:05:01Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,STEP_START,,,,,,Main sputter deposition started
+2026-03-10T10:05:15Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,PARAMETER_READING,rf_power,800.0,W,,,
+2026-03-10T10:05:30Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,PARAMETER_READING,temperature,78.4,C,,,
+2026-03-10T10:05:45Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,PARAMETER_READING,gas_flow,148.9,sccm,,,
+2026-03-10T10:06:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,PARAMETER_READING,pressure,0.0034,Torr,,,
+2026-03-10T10:06:30Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,ALARM,temperature,112.7,C,ALM_TEMP_HIGH_003,WARNING,Chuck temperature above limit
+2026-03-10T10:07:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,PARAMETER_READING,rf_power,799.5,W,,,
+2026-03-10T10:09:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Deposition,STEP_END,,,,,,Deposition complete
+2026-03-10T10:09:01Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Cool Down,STEP_START,,,,,,RF off. N2 purge active.
+2026-03-10T10:10:00Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Cool Down,PARAMETER_READING,temperature,55.0,C,,,
+2026-03-10T10:11:30Z,PVD_TOOL_01,CH_A,RCP_TiN_SPUTTER_02,Cool Down,STEP_END,,,,,,Cool Down complete`,
+
+    'euv_scanner_02.log': `Mar 10 11:00:00 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load event=STEP_START msg="Wafer loaded onto chuck"
+Mar 10 11:00:05 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load parameter=temperature value=22.1 unit=C alarm_code=None
+Mar 10 11:00:10 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load parameter=pressure value=0.9 unit=Torr alarm_code=None
+Mar 10 11:00:20 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Load event=STEP_END msg="Wafer load complete. Vacuum seal confirmed."
+Mar 10 11:00:21 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align event=STEP_START msg="Reticle alignment sequence initiated"
+Mar 10 11:00:35 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align parameter=temperature value=22.3 unit=C alarm_code=None
+Mar 10 11:00:50 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align parameter=pressure value=0.85 unit=Torr alarm_code=None
+Mar 10 11:01:10 EUV_SCAN_02 ALARM[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align parameter=pressure value=1.4 unit=Torr alarm_code=ALM_PRESS_DRIFT_011 severity=WARNING msg="Reticle chamber pressure drifting above nominal"
+Mar 10 11:01:20 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Reticle_Align event=STEP_END msg="Alignment complete. Overlay error within spec."
+Mar 10 11:01:21 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure event=STEP_START msg="EUV exposure step started. Source on."
+Mar 10 11:01:30 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=rf_power value=480.0 unit=W alarm_code=None
+Mar 10 11:01:45 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=temperature value=23.0 unit=C alarm_code=None
+Mar 10 11:02:00 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=gas_flow value=55.0 unit=sccm alarm_code=None
+Mar 10 11:02:15 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=pressure value=0.88 unit=Torr alarm_code=None
+Mar 10 11:02:45 EUV_SCAN_02 ALARM[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=rf_power value=540.1 unit=W alarm_code=ALM_RF_OVERPWR_002 severity=WARNING msg="Source power transient spike detected"
+Mar 10 11:03:00 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure parameter=rf_power value=479.8 unit=W alarm_code=None
+Mar 10 11:03:30 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Exposure event=STEP_END msg="Exposure complete. Dose confirmed within spec."
+Mar 10 11:03:31 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Unload event=STEP_START msg="Wafer unload sequence initiated"
+Mar 10 11:03:45 EUV_SCAN_02 SENSOR[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Unload parameter=pressure value=760.0 unit=Torr alarm_code=None
+Mar 10 11:04:00 EUV_SCAN_02 PROCESS[1042]: tool_id=EUV_SCAN_02 chamber_id=CH_EUV recipe=RCP_EUV_LITHO_07 step=Wafer_Unload event=STEP_END msg="Wafer unload complete. Robot transfer ready."`,
+
+    'ald_tool_01.kv': `timestamp=2026-03-10T12:00:00Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge event_type=STEP_START alarm_code=None message="Purge cycle initiated"
+timestamp=2026-03-10T12:00:10Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge event_type=PARAMETER_READING parameter=gas_flow value=300.0 unit=sccm alarm_code=None
+timestamp=2026-03-10T12:00:20Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge event_type=PARAMETER_READING parameter=pressure value=1.05 unit=Torr alarm_code=None
+timestamp=2026-03-10T12:00:30Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge event_type=PARAMETER_READING parameter=temperature value=250.0 unit=C alarm_code=None
+timestamp=2026-03-10T12:00:45Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge event_type=STEP_END alarm_code=None message="Purge complete"
+timestamp=2026-03-10T12:00:46Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Precursor_A_Dose event_type=STEP_START alarm_code=None message="HfCl4 precursor dose started"
+timestamp=2026-03-10T12:01:00Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Precursor_A_Dose event_type=PARAMETER_READING parameter=gas_flow value=25.0 unit=sccm alarm_code=None
+timestamp=2026-03-10T12:01:10Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Precursor_A_Dose event_type=PARAMETER_READING parameter=pressure value=1.22 unit=Torr alarm_code=None
+timestamp=2026-03-10T12:01:20Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Precursor_A_Dose event_type=PARAMETER_READING parameter=temperature value=251.3 unit=C alarm_code=None
+timestamp=2026-03-10T12:01:30Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Precursor_A_Dose event_type=STEP_END alarm_code=None message="HfCl4 dose complete"
+timestamp=2026-03-10T12:01:31Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge_A event_type=STEP_START alarm_code=None message="Post-precursor purge started"
+timestamp=2026-03-10T12:01:40Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge_A event_type=PARAMETER_READING parameter=gas_flow value=300.0 unit=sccm alarm_code=None
+timestamp=2026-03-10T12:02:35Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Oxidant_Dose event_type=ALARM parameter=pressure value=1.85 unit=Torr alarm_code=ALM_PRESS_SPIKE_005 severity=WARNING message="Pressure spike during H2O dose. Valve timing check recommended."
+timestamp=2026-03-10T12:02:55Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Oxidant_Dose event_type=STEP_END alarm_code=None message="H2O dose complete"
+timestamp=2026-03-10T12:03:10Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge_B event_type=PARAMETER_READING parameter=gas_flow value=300.0 unit=sccm alarm_code=None
+timestamp=2026-03-10T12:03:20Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge_B event_type=PARAMETER_READING parameter=temperature value=250.5 unit=C alarm_code=None
+timestamp=2026-03-10T12:03:30Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name=RCP_HfO2_ALD_04 recipe_step=Purge_B event_type=STEP_END alarm_code=None message="Purge B complete. ALD cycle 1 done."`,
+
+    'etch_tool_06_binary.hex': `# TOOL: ETCH_TOOL_06 | CHAMBER: CH_B | RECIPE: RCP_DRYETCH_09 | FORMAT: HEX_PACKED_V2
+# FIELDS: [UNIX_TS_4B][TOOL_ID_8B][CHAMBER_ID_4B][STEP_ID_1B][EVENT_TYPE_1B][PARAM_ID_1B][VALUE_4B_FLOAT][ALARM_1B][CHECKSUM_1B]
+# EVENT_TYPE: 01=STEP_START 02=STEP_END 03=PARAMETER_READING 04=ALARM
+# PARAM_ID:   01=temperature 02=pressure 03=rf_power 04=gas_flow FF=N/A
+# ALARM_CODE: 00=None A1=ALM_TEMP_HIGH_003 A2=ALM_RF_OVERPWR_001 A3=ALM_PRESS_DRIFT_011 A4=ALM_GASFLOW_HIGH_007
+67CE 5200 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0101 FF00 0000 0000 7A
+67CE 5210 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0103 0242 3C00 0000 8B
+67CE 5220 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0103 0141 C800 0000 9C
+67CE 5300 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0301 FF00 0000 0000 36
+67CE 5310 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0303 0343 9600 0000 47
+67CE 5330 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0304 0244 1800 00A2 69
+67CE 5350 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0401 FF00 0000 0000 8B
+67CE 5360 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0403 0344 1400 0000 9C
+67CE 5370 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0403 0142 F200 0000 AD
+67CE 53C0 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0404 0143 8800 00A1 F2
+67CE 53E0 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0402 FF00 0000 0000 14
+67CE 53E1 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0501 FF00 0000 0000 25
+67CE 5400 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0503 0142 8400 0000 36
+67CE 5460 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0502 FF00 0000 0000 69`,
+
     'multi_chamber_etch.json': JSON.stringify([
       {
         FabID: "FAB_01", EquipmentID: "ETCH_TOOL_02", ChamberID: "CH_A", RecipeID: "RCP_SI_ETCH_01", RunID: "RUN_ET02_001", LotID: "LOT_2026_0306",
