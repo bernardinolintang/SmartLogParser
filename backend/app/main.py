@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import init_db
-from app.routes import upload, runs, dashboards, stream, synthetic, bi
+from app.routes import upload, runs, dashboards, stream, synthetic, bi, ingestion
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -30,7 +30,7 @@ app.include_router(dashboards.router)
 app.include_router(stream.router)
 app.include_router(synthetic.router)
 app.include_router(bi.router)
-
+app.include_router(ingestion.router)
 
 @app.on_event("startup")
 def on_startup():

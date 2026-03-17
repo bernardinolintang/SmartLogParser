@@ -247,9 +247,42 @@ const Index = () => {
                 <ToolHealthDashboard events={filteredEvents} />
               </motion.div>
             )}
-
             {activeTab === 'streaming' && (
-              <motion.div key="streaming" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="streaming" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                {/* Industrial Sync Component */}
+                <div className="p-6 border border-primary/20 rounded-xl bg-card/40 backdrop-blur-md shadow-glow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Radio className="w-5 h-5 text-primary animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Industrial Fab Ingestion</h3>
+                      <p className="text-xs text-muted-foreground">Pull raw telemetry from Elasticsearch (Simulated Fab Storage)</p>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={async () => {
+                      const btn = document.getElementById('sync-btn');
+                      if (btn) btn.innerText = 'Syncing...';
+                      try {
+                        const res = await fetch('http://localhost:8000/api/ingest/sync/ETCH_01', { method: 'POST' });
+                        const data = await res.json();
+                        alert(data.status);
+                      } catch (e) {
+                        alert('Sync Failed. Check if Backend & Elastic are running.');
+                      } finally {
+                        if (btn) btn.innerText = 'Sync from Fab Storage';
+                      }
+                    }}
+                    id="sync-btn"
+                    className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-sm hover:opacity-90 transition-all shadow-glow-primary"
+                  >
+                    Sync from Fab Storage
+                  </button>
+                </div>
+
+                {/* Original Streaming Monitor */}
                 <StreamingMonitor />
               </motion.div>
             )}

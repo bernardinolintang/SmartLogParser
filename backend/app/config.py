@@ -14,6 +14,16 @@ class Settings(BaseSettings):
     llm_model: str = "llama-3.3-70b-versatile"
     llm_batch_size: int = 25
 
-    model_config = {"env_file": str(_PROJECT_ROOT / ".env")}
+    splunk_hec_url: str = ""
+    splunk_hec_token: str = ""
+    elastic_url: str = "https://localhost:9200"
+    elastic_username: str = "elastic"
+    elastic_password: str = ""
+    elastic_index: str = "fab-logs-2026"
 
+    model_config = {
+            "env_file": str(_PROJECT_ROOT / ".env"),
+            "extra": "ignore"
+        }
+    
 settings = Settings()
