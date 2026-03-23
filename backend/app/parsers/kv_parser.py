@@ -3,6 +3,8 @@
 Example:
     timestamp=2026-03-05T11:30:05 equipment_id=METRO_TOOL_01 temperature=23.5 humidity=45.2
 """
+from __future__ import annotations
+
 
 import re
 

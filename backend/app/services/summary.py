@@ -1,4 +1,5 @@
 """Compute summary metrics for a parsed run."""
+from __future__ import annotations
 
 from datetime import datetime
 from statistics import median

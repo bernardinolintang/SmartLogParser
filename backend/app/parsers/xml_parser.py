@@ -2,6 +2,8 @@
 
 Uses defusedxml for safe parsing (no external entity attacks).
 """
+from __future__ import annotations
+
 
 from defusedxml import ElementTree as ET
 

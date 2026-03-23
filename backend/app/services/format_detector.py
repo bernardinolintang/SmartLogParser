@@ -2,6 +2,7 @@
 
 Returns one of: json, xml, csv, kv, syslog, text, hex, binary
 """
+from __future__ import annotations
 
 import re
 

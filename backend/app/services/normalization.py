@@ -1,4 +1,6 @@
 """Post-parse normalization: standardize names, units, event types, severity."""
+from __future__ import annotations
+
 
 from app.utils.mappings import (
     normalize_parameter,

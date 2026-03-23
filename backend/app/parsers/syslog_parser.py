@@ -4,6 +4,8 @@ Supports:
 - RFC 5424 style: <PRI>1 2026-03-05T11:00:08Z host app proc msgid [sd] msg
 - RFC 3164 style: Mar 05 11:00:08 HOST TAG message
 """
+from __future__ import annotations
+
 
 import re
 from datetime import datetime

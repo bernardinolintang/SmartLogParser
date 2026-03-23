@@ -1,4 +1,6 @@
 """Extract numeric values and units from strings like '120C' or '0.8Torr'."""
+from __future__ import annotations
+
 
 import re
 

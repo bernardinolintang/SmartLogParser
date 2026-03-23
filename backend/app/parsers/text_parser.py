@@ -4,6 +4,8 @@ Falls back to LLM parsing when confidence is low.
 Lines like 'Temperature: 23C' or 'Pressure set to 0.8 Torr' are handled
 deterministically. Anything else is marked as partial and queued for LLM.
 """
+from __future__ import annotations
+
 
 import re
 

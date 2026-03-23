@@ -2,6 +2,8 @@
 
 Expects header row with columns mapping to the canonical schema.
 """
+from __future__ import annotations
+
 
 import csv
 import io

@@ -3,6 +3,8 @@
 Used as a fallback when deterministic parsing produces partial results.
 Batches log lines into groups for efficiency.
 """
+from __future__ import annotations
+
 
 import json
 import logging

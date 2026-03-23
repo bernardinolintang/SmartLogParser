@@ -2,6 +2,8 @@
 
 Decodes hex bytes to ASCII, then delegates to the text or KV parser.
 """
+from __future__ import annotations
+
 
 import re
 

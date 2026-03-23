@@ -85,12 +85,19 @@ SEVERITY_MAP: dict[str, str] = {
 
 
 ALARM_SEVERITY: dict[str, str] = {
+    # Raw/vendor codes
     "VACUUM_FAILURE": "critical",
     "TEMP_SPIKE": "warning",
     "LOW_PRESSURE": "warning",
     "RF_POWER_FAULT": "critical",
     "GAS_LEAK": "critical",
     "OVER_TEMP": "alarm",
+    # Canonical codes (post-normalization) — same values so both raw and
+    # normalized lookups succeed after normalize_alarm_code() is called.
+    "VACUUM_FAULT": "critical",
+    "PRESSURE_LOW": "warning",
+    "TEMP_HIGH": "warning",
+    "RF_INTERLOCK": "critical",
 }
 
 ALARM_CODE_MAP: dict[str, str] = {

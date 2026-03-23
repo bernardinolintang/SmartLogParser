@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Set
 from pydantic_settings import BaseSettings
 from pathlib import Path
 import os
@@ -10,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{(_BACKEND_DIR / 'smartlogparser.db').as_posix()}"
     max_upload_size_mb: int = 20
     upload_dir: str = str(_BACKEND_DIR / "uploads")
-    allowed_extensions: set[str] = {".json", ".xml", ".csv", ".log", ".txt", ".kv", ".hex", ".bin"}
+    allowed_extensions: Set[str] = {".json", ".xml", ".csv", ".log", ".txt", ".kv", ".hex", ".bin"}
     llm_model: str = "llama-3.3-70b-versatile"
     llm_batch_size: int = 25
 

@@ -4,6 +4,7 @@ Flow:
     detect format -> deterministic parse -> normalize -> validate
     -> LLM fallback for partial events -> store in DB -> compute summary
 """
+from __future__ import annotations
 
 import uuid
 import logging

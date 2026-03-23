@@ -2,6 +2,8 @@
 
 Handles both single objects and arrays, with nested ProcessSteps.
 """
+from __future__ import annotations
+
 
 import json
 from datetime import datetime
