@@ -3,8 +3,8 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "concurrently -k -n BACKEND,FRONTEND -c cyan,magenta \"python -m uvicorn app.main:app --reload --port 8000 --app-dir backend\" \"npm --prefix frontend run dev\"",
-    "dev:backend": "python -m uvicorn app.main:app --reload --port 8000 --app-dir backend",
+    "dev": "concurrently -k -n BACKEND,FRONTEND -c cyan,magenta \"python -m uvicorn app.main:app --reload --port 8001 --app-dir backend\" \"npm --prefix frontend run dev\"",
+    "dev:backend": "python -m uvicorn app.main:app --reload --port 8001 --app-dir backend",
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",

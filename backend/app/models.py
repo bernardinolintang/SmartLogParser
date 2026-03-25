@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, Index
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 from app.database import Base
 
@@ -18,6 +18,7 @@ class Run(Base):
     total_events = Column(Integer, default=0)
     alarm_count = Column(Integer, default=0)
     warning_count = Column(Integer, default=0)
+    needs_review = Column(Boolean, default=False)
 
 
 class Event(Base):
@@ -49,8 +50,9 @@ class Event(Base):
     message = Column(Text)
     raw_line = Column(Text)
     raw_line_number = Column(Integer)
-    parse_status = Column(String, default="ok")  # ok | partial | failed
+    parse_status = Column(String, default="ok")  # ok | partial | failed | low_confidence
     parse_error = Column(String)
+    parser_version = Column(String, default="1.0.0")
 
 
 class DriftAlert(Base):
@@ -67,6 +69,20 @@ class DriftAlert(Base):
     current_value = Column(Float)
     pct_deviation = Column(Float)
     severity = Column(String, default="info")
+
+
+class FailedEvent(Base):
+    __tablename__ = "failed_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    run_id = Column(String, nullable=False, index=True)
+    raw_line = Column(Text)
+    raw_line_number = Column(Integer)
+    error = Column(Text)
+    parser_version = Column(String)
+    retry_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    last_retry_at = Column(DateTime, nullable=True)
 
 
 class RunSummary(Base):

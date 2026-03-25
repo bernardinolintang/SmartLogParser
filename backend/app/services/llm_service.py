@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 
+import requests
 from groq import Groq
 
 from app.config import settings
@@ -56,6 +57,17 @@ Return only the token, nothing else.
 """
 
 
+def _get_provider() -> str | None:
+    """Return 'ollama' if configured, 'groq' if API key present, else None."""
+    if settings.ollama_url:
+        logger.info("LLM provider: ollama (%s)", settings.ollama_url)
+        return "ollama"
+    if settings.groq_api_key:
+        logger.info("LLM provider: groq")
+        return "groq"
+    return None
+
+
 def _get_client() -> Groq | None:
     if not settings.groq_api_key:
         return None
@@ -63,26 +75,43 @@ def _get_client() -> Groq | None:
 
 
 def parse_lines_with_llm(lines: list[str], run_id: str) -> list[dict]:
-    """Send a batch of log lines to Groq and return structured events."""
-    client = _get_client()
-    if client is None:
-        logger.warning("Groq API key not configured; skipping LLM parsing")
+    """Send a batch of log lines to the configured LLM and return structured events."""
+    provider = _get_provider()
+    if provider is None:
+        logger.warning("No LLM configured, skipping fallback")
         return []
 
     numbered = "\n".join(f"[LINE {i+1}] {line}" for i, line in enumerate(lines))
     user_prompt = f"Parse these {len(lines)} semiconductor log lines:\n\n{numbered}"
 
     try:
-        response = client.chat.completions.create(
-            model=settings.llm_model,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.0,
-            max_tokens=4096,
-        )
-        raw_text = response.choices[0].message.content.strip()
+        if provider == "ollama":
+            response = requests.post(
+                f"{settings.ollama_url}/api/chat",
+                json={
+                    "model": settings.llm_model,
+                    "messages": [
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "stream": False,
+                },
+                timeout=120,
+            )
+            response.raise_for_status()
+            raw_text = response.json()["message"]["content"].strip()
+        else:
+            client = _get_client()
+            response = client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.0,
+                max_tokens=4096,
+            )
+            raw_text = response.choices[0].message.content.strip()
 
         start = raw_text.find("[")
         end = raw_text.rfind("]") + 1
@@ -118,23 +147,40 @@ def parse_lines_with_llm(lines: list[str], run_id: str) -> list[dict]:
 
 def classify_log_format_with_llm(content: str) -> str | None:
     """Use LLM to classify ambiguous or malformed log content format."""
-    client = _get_client()
-    if client is None:
+    provider = _get_provider()
+    if provider is None:
         return None
 
     snippet = content[:4000]
+    allowed = {"json", "xml", "csv", "kv", "syslog", "text", "hex"}
     try:
-        response = client.chat.completions.create(
-            model=settings.llm_model,
-            messages=[
-                {"role": "system", "content": _FORMAT_SYSTEM_PROMPT},
-                {"role": "user", "content": snippet},
-            ],
-            temperature=0.0,
-            max_tokens=16,
-        )
-        token = response.choices[0].message.content.strip().lower()
-        allowed = {"json", "xml", "csv", "kv", "syslog", "text", "hex"}
+        if provider == "ollama":
+            response = requests.post(
+                f"{settings.ollama_url}/api/chat",
+                json={
+                    "model": settings.llm_model,
+                    "messages": [
+                        {"role": "system", "content": _FORMAT_SYSTEM_PROMPT},
+                        {"role": "user", "content": snippet},
+                    ],
+                    "stream": False,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            token = response.json()["message"]["content"].strip().lower()
+        else:
+            client = _get_client()
+            response = client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[
+                    {"role": "system", "content": _FORMAT_SYSTEM_PROMPT},
+                    {"role": "user", "content": snippet},
+                ],
+                temperature=0.0,
+                max_tokens=16,
+            )
+            token = response.choices[0].message.content.strip().lower()
         return token if token in allowed else None
     except Exception as e:
         logger.error("LLM format classification failed: %s", e)

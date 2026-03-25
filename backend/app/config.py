@@ -13,8 +13,10 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 20
     upload_dir: str = str(_BACKEND_DIR / "uploads")
     allowed_extensions: Set[str] = {".json", ".xml", ".csv", ".log", ".txt", ".kv", ".hex", ".bin"}
+    ollama_url: str = ""
     llm_model: str = "llama-3.3-70b-versatile"
     llm_batch_size: int = 25
+    parser_version: str = "1.1.0"
 
     splunk_hec_url: str = ""
     splunk_hec_token: str = ""

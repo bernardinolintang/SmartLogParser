@@ -1,264 +1,234 @@
 # Smart Semiconductor Tool Log Parser
 
-Smart Semiconductor Tool Log Parser is a full-stack observability platform that transforms heterogeneous semiconductor equipment logs into structured machine events for analytics, process monitoring, and engineering investigation.
-
-This project simulates a real fab-style data pipeline:
-
-`raw logs -> parsing + normalization -> structured events -> dashboards + diagnostics`
-
-## Manufacturing Context
-
-Semiconductor tools such as plasma etch systems, CVD/PVD deposition tools, lithography scanners, metrology stations, and wafer inspection systems produce high-volume, vendor-specific logs. These logs differ in syntax, metadata shape, and naming conventions, but often describe the same underlying machine behavior.
-
-In production fabs, process and equipment engineers do not manually read raw logs line-by-line at scale. Instead, data pipelines ingest and standardize logs so teams can monitor health, investigate alarms, and detect drift.
-
-This project demonstrates exactly that workflow.
-
-## Core Capabilities
-
-- Multi-format ingestion: JSON, XML, CSV, key-value, syslog, text, hex, binary (`.bin`)
-- Automatic format detection and parser routing
-- Deterministic parsing for structured formats
-- LLM-assisted fallback parsing for ambiguous or unstructured lines
-- Vendor-to-canonical normalization (`TEMP_C -> temperature`, etc.)
-- Event validation with partial-row handling (no full-run failure)
-- Run-based storage and summary metrics
-- Dashboard workflows for alarms, trends, health, and comparisons
-- Golden-run baseline comparison and drift detection
-- Simulated real-time streaming ingestion
-
-## Operational Assumptions (Hackathon Baseline)
-
-- Logs may be tool-level only, or include chamber and recipe-step context.
-- `lot_id` and `wafer_id` are treated as first-class fields when present.
-- Cadence varies by source; summary infers an approximate median sampling interval.
-- Alarm codes are vendor-specific at input and normalized to canonical internal codes.
-- Teams can run batch processing after runs, with optional stream simulation for live monitoring.
-
-## End-to-End Architecture
+A full-stack observability platform that transforms heterogeneous semiconductor equipment logs into structured machine events for analytics, process monitoring, and engineering investigation.
 
 ```
-Semiconductor Equipment Tools
-        ->
-Log Ingestion Layer (upload / streaming)
-        ->
-Format Detection
-        ->
-Parser Router
-        ->
-Specialized Parsers (JSON/XML/CSV/KV/Syslog/Text/Hex/Binary)
-        ->
-LLM Fallback (only when deterministic confidence is low)
-        ->
-Normalization Engine
-        ->
-Structured Event Schema
-        ->
-Database Storage
-        ->
-Analytics and Investigation Dashboards
+raw logs → format detection → parsing → normalization → validation → structured events → dashboards
 ```
 
-## One-Command Local Run
+---
 
-### Prerequisites
+## Quick Start (Recommended — Docker)
 
-- Node.js 18+
-- Python 3.11+
+**Prerequisites:** Install [Docker](https://www.docker.com) — one time only, works on Windows, Mac, and Linux.
 
-### Environment Setup
-
-Create your root `.env` from `.env.example`:
+### First time
 
 ```sh
-cp .env.example .env
+./setup.sh      # Mac/Linux
+setup.bat       # Windows
 ```
 
-On Windows PowerShell:
+Downloads the AI model (~10–20 min on first run, cached after that).
 
-```powershell
-Copy-Item .env.example .env
-```
-
-Set at minimum:
-
-- `GROQ_API_KEY` (required for LLM fallback parsing)
-- `MAX_UPLOAD_SIZE_MB` (optional upload limit override)
-- `DATABASE_URL` (optional, defaults to local SQLite when omitted)
-
-### Install
+### Every time after
 
 ```sh
+docker compose up
+```
+
+Open [http://localhost:8080](http://localhost:8080).
+
+```sh
+docker compose down    # to stop
+```
+
+### What runs
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Frontend | 8080 | React dashboard |
+| Backend | 8001 | FastAPI — parse, store, query |
+| Ollama | 11434 | Local AI — no data leaves your machine |
+
+### Production vs Development
+
+| | Development | Production |
+|--|-------------|------------|
+| Database | SQLite (default, zero-config) | Set `DATABASE_URL` to Supabase PostgreSQL |
+| AI | Set `GROQ_API_KEY` for Groq cloud | Ollama runs automatically via Docker |
+
+Copy `.env.example` to `.env` to configure.
+
+---
+
+## Manual Setup (no Docker)
+
+Requirements: Node.js 18+, Python 3.11+
+
+```sh
+cp .env.example .env       # then edit — set GROQ_API_KEY at minimum
 npm install
 npm --prefix frontend install
-cd backend
-pip install -r requirements.txt
-```
-
-### Start Everything
-
-```sh
+cd backend && pip install -r requirements.txt && cd ..
 npm run dev
 ```
 
-This now starts both:
+- Frontend: `http://localhost:8080`
+- Backend + Swagger UI: `http://localhost:8001/docs`
 
-- Frontend (Vite): `http://localhost:8080`
-- Backend (FastAPI): `http://localhost:8000`
+Aliases: `npm run dev:frontend`, `npm run dev:backend`
 
-Backend interactive API docs:
+---
 
-- Swagger UI: `http://localhost:8000/docs`
-- OpenAPI JSON: `http://localhost:8000/openapi.json`
+## Manufacturing Context
 
-Useful alternatives:
+Semiconductor tools (plasma etch, CVD/PVD, lithography, metrology) produce high-volume vendor-specific logs that differ in syntax, field naming, and structure. Engineers cannot manually read these at scale. This platform automates the conversion so teams can monitor health, investigate alarms, and detect drift.
 
-- `npm run dev:frontend` - frontend only
-- `npm run dev:backend` - backend only
+---
+
+## Core Capabilities
+
+- **Multi-format ingestion:** JSON, XML, CSV, key-value, syslog, text, hex, binary
+- **Confidence-scored format detection** with ambiguity flag — runs marked `needs_review` when uncertain
+- **Deterministic parsing** for structured formats, LLM fallback for partial/ambiguous lines
+- **Dual LLM support:** Ollama (local, Docker) or Groq (cloud) — auto-selected
+- **Physical limits validation** — readings outside known physical ranges flagged automatically
+- **Parser version tracking** — every event stamped with the parser version that created it
+- **Dead letter queue** — fully failed events stored separately, retryable up to 3 times
+- **Vendor normalization** (`TEMP_C` → `temperature`, etc.)
+- **Deduplication** within runs
+- **Golden-run baseline** and drift detection
+- **Streaming ingestion** simulation
+- **Industrial bridge** — pull from Elasticsearch, push to Splunk HEC
+- **BI connectors** — Grafana, Tableau, Power BI via PostgreSQL or REST
+
+---
 
 ## Project Layout
 
-Current implementation:
-
 ```
 SmartLogParser/
+  backend/
+    app/
+      parsers/           Format-specific parsers (json, xml, csv, kv, syslog, text, hex, binary)
+      services/          Pipeline orchestration, LLM, normalization, validation, Elastic, Splunk
+      routes/            API endpoints
+      utils/             Field mappings, physical limits
+      models.py          ORM: Run, Event, FailedEvent, DriftAlert, RunSummary
+      schemas.py         Pydantic I/O schemas
+      config.py          Settings from .env
+      security.py        Upload policy + CSV hardening
+    Dockerfile
+    requirements.txt
+    sample_logs/
   frontend/
     src/
       components/
       pages/
-      lib/
-    public/
-    package.json
-  backend/
-    app/
-      parsers/
-      services/
-      routes/
-      models.py
-      schemas.py
-      security.py
-      main.py
-    sample_logs/
-    requirements.txt
+      lib/api.ts
+    Dockerfile
+  docker-compose.yml
+  setup.sh / setup.bat
+  .env.example
   README.md
   USER_GUIDE.md
   DEVELOPER_GUIDE.md
 ```
 
-Reference split-layout for larger teams:
+---
 
-```
-project-root/
-  frontend/
-  backend/
-```
+## Canonical Event Schema
 
-## Canonical Event Model
+Every parser emits the same contract:
 
-Every parser emits the same logical schema:
+| Field | Notes |
+|-------|-------|
+| `run_id` | Upload session identifier |
+| `timestamp` | ISO-like string |
+| `fab_id`, `tool_id`, `chamber_id` | Equipment context |
+| `tool_type` | etch / deposition / lithography / metrology |
+| `lot_id`, `wafer_id` | Wafer tracking |
+| `recipe_name`, `recipe_step` | Process context |
+| `event_type` | See event types below |
+| `parameter`, `value`, `unit` | Sensor reading |
+| `alarm_code`, `severity` | info / warning / alarm / critical |
+| `message` | Original message text |
+| `raw_line`, `raw_line_number` | Source traceability |
+| `parse_status` | ok / partial / low_confidence / failed |
+| `parse_error` | Semicolon-separated error tokens |
+| `parser_version` | Parser version that created this event |
 
-- `run_id`
-- `timestamp`
-- `fab_id`
-- `tool_id`
-- `chamber_id`
-- `recipe_name`
-- `recipe_step`
-- `event_type`
-- `parameter`
-- `value`
-- `unit`
-- `alarm_code`
-- `severity`
-- `message`
-- `raw_line`
-- `source_format`
-- `parse_status`
+**Event types:** `PROCESS_START`, `PROCESS_END`, `STEP_START`, `STEP_END`, `PARAMETER_READING`, `ALARM`, `WARNING`, `STATE_CHANGE`, `PROCESS_ABORT`, `DRIFT_WARNING`
 
-Missing values are represented as `null`/empty based on parser context, then normalized.
+---
 
-## Supported Event Types
+## API Surface
 
-- `PROCESS_START`
-- `PROCESS_END`
-- `STEP_START`
-- `STEP_END`
-- `PARAMETER_READING`
-- `ALARM`
-- `WARNING`
-- `STATE_CHANGE`
-- `PROCESS_ABORT`
-- `DRIFT_WARNING`
+### Ingestion
 
-## Parameter Focus for Monitoring
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/upload` | File upload (multipart) |
+| POST | `/api/parse` | Parse raw content string |
+| POST | `/api/stream/start` | Begin streaming session |
+| POST | `/api/stream/append` | Append chunk |
+| POST | `/api/stream/finish` | Finalize stream |
+| POST | `/api/ingest/sync/{tool_id}` | Pull from Elasticsearch and parse |
 
-- `temperature`
-- `pressure`
-- `rf_power`
-- `gas_flow`
-- `voltage`
-- `current`
-- `pump_speed`
+### Run and analytics
 
-## API Surface (MVP)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/runs` | List all runs |
+| GET | `/api/runs/{run_id}` | Run detail (includes `needs_review`) |
+| GET | `/api/runs/{run_id}/events` | Events with filters |
+| GET | `/api/runs/{run_id}/alarms` | Alarm-severity events |
+| GET | `/api/runs/{run_id}/summary` | Summary metrics |
+| GET | `/api/runs/{run_id}/timeseries` | Parameter readings over time |
+| GET | `/api/runs/{run_id}/timeline` | All events in order |
+| GET | `/api/runs/{run_id}/health` | Health score |
+| GET | `/api/runs/{run_id}/drift` | Drift alerts |
 
-- `POST /api/upload`
-- `POST /api/parse`
-- `GET /api/runs`
-- `GET /api/runs/{run_id}`
-- `GET /api/runs/{run_id}/events`
-- `GET /api/runs/{run_id}/summary`
-- `GET /api/runs/{run_id}/timeseries`
-- `GET /api/runs/{run_id}/timeline`
-- `GET /api/runs/{run_id}/health`
-- `GET /api/runs/{run_id}/drift`
-- `POST /api/runs/{run_id}/mark-golden`
-- `GET /api/golden/compare`
-- `GET /api/runs/{run_id}/download/csv`
-- `GET /api/runs/{run_id}/download/json`
-- `POST /api/stream/start`
-- `POST /api/stream/append`
-- `POST /api/stream/finish`
-- `GET /api/synthetic/{format_type}` (`json|xml|csv|kv|syslog|text|binary|hex`)
-- `GET /api/bi/events`
-- `GET /api/bi/timeseries`
-- `GET /api/bi/kpis`
+### Data quality
 
-## External Dashboard Integration
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/runs/{run_id}/failed` | Dead letter queue contents |
+| POST | `/api/runs/{run_id}/retry-failed` | Retry failed events via LLM |
+| GET | `/api/runs/{run_id}/reprocess-needed?min_version=X` | Find events older than parser version X |
 
-Pipeline:
+### Baseline, export, BI
 
-`Parser -> database -> BI tool`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/runs/{run_id}/mark-golden` | Mark as baseline |
+| GET | `/api/golden/compare` | Compare against golden |
+| GET | `/api/runs/{run_id}/download/csv` | Export as CSV |
+| GET | `/api/runs/{run_id}/download/json` | Export as JSON |
+| GET | `/api/bi/events` | BI flat events |
+| GET | `/api/bi/timeseries` | BI timeseries |
+| GET | `/api/bi/kpis` | BI KPIs |
+| GET | `/api/synthetic/{format}` | Generate sample log for testing |
 
-Supported phase-1 integrations:
+---
 
-- Grafana: PostgreSQL SQL datasource + starter queries in `docs/grafana_starter_queries.sql`
-- Tableau: direct PostgreSQL connector or REST pull from `/api/bi/*`
-- Power BI: direct PostgreSQL connector or REST ingestion from `/api/bi/*`
+## External Integrations
 
-Recommended production `DATABASE_URL`:
+| System | Status | How |
+|--------|--------|-----|
+| Supabase PostgreSQL | Production DB | Set `DATABASE_URL` in `.env` |
+| Elasticsearch | Pull source | `POST /api/ingest/sync/{tool_id}` |
+| Splunk HEC | Push target | Automatic after each Elasticsearch sync |
+| Grafana | Dashboard | PostgreSQL datasource — see `docs/grafana_starter_queries.sql` |
+| Tableau / Power BI | Dashboard | PostgreSQL connector or `/api/bi/*` REST |
 
-- `postgresql+psycopg://<user>:<password>@<host>:5432/<db_name>`
-
-Notable parser updates:
-
-- Confidence-scored format detection (`format + confidence`)
-- RFC-aware syslog parsing (RFC5424 + RFC3164 patterns)
-- Dedicated binary parser for struct-packed tool logs (with hex fallback)
-- Synthetic log generator endpoints for all supported formats
+---
 
 ## Security Controls
 
-- Extension allowlist and upload size limits
-- Sanitized server-side filenames and non-public upload storage
-- Safe XML parsing (`defusedxml`)
-- Strict schema-constrained LLM output handling
-- Prompt-injection-aware LLM system prompts
-- API key isolation via environment variables
-- CSV formula injection mitigation on exports
-- No dynamic code execution of uploaded payloads
+- Extension allowlist (`.json`, `.xml`, `.csv`, `.log`, `.txt`, `.kv`, `.hex`, `.bin`)
+- Upload size limit enforced server-side
+- Safe XML parsing via `defusedxml`
+- LLM prompts instruct model to ignore instructions embedded in log content
+- LLM output schema-validated before storage
+- API keys and credentials in `.env` — never in frontend bundle
+- CSV formula injection mitigation on all exports
+- No `eval`/`exec` of uploaded content
+
+---
 
 ## Additional Documentation
 
-- `USER_GUIDE.md` - product usage guide for operators, judges, and non-specialists
-- `DEVELOPER_GUIDE.md` - implementation guide for engineers extending parsers, services, and dashboards
+- [USER_GUIDE.md](USER_GUIDE.md) — usage guide for operators, judges, and non-specialists
+- [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) — architecture, extension points, API contracts, deployment

@@ -4,9 +4,16 @@ Returns one of: json, xml, csv, kv, syslog, text, hex, binary
 """
 from __future__ import annotations
 
+import json
 import re
 
 LogFormat = str  # one of: json, xml, csv, kv, syslog, text, hex, binary
+
+_CSV_SCORE_HEADERS = {"timestamp", "tool_id", "equipment_id", "parameter", "value"}
+_RFC5424 = re.compile(r"^\<\d+\>\d+\s+\d{4}-\d{2}-\d{2}T")
+_RFC3164 = re.compile(r"^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}")
+_KV_LINE = re.compile(r"^\w+=\S+")
+_HEX_TOKEN = re.compile(r"^[0-9A-Fa-f]{2}$")
 
 
 def looks_binary_bytes(raw_bytes: bytes) -> bool:
@@ -20,38 +27,84 @@ def looks_binary_bytes(raw_bytes: bytes) -> bool:
 
 
 def detect_format(content: str) -> LogFormat:
-    fmt, _ = detect_format_with_confidence(content)
+    fmt, _, _ = detect_format_with_confidence(content)
     return fmt
 
 
-def detect_format_with_confidence(content: str, raw_bytes: bytes | None = None) -> tuple[LogFormat, float]:
+def detect_format_with_confidence(
+    content: str, raw_bytes: bytes | None = None
+) -> tuple[LogFormat, float, bool]:
+    """Return (format, confidence, ambiguous).
+
+    ambiguous is True when the top two candidate scores are within 0.15 of each other.
+    """
     if raw_bytes is not None and looks_binary_bytes(raw_bytes):
-        return "binary", 0.95
+        return "binary", 0.95, False
 
     trimmed = content.strip()
     if not trimmed:
-        return "text", 0.5
+        return "text", 0.5, False
 
-    if trimmed[0] in ("{", "["):
-        return "json", 0.95
-
-    if trimmed.startswith("<?xml") or (trimmed.startswith("<") and ("</" in trimmed or "/>" in trimmed)):
-        return "xml", 0.92
-
-    if re.match(r"^[0-9A-Fa-f]{2}(\s+[0-9A-Fa-f]{2}){4,}", trimmed):
-        return "hex", 0.9
-
+    scores: dict[str, float] = {}
     lines = trimmed.split("\n")
-
     first_line = lines[0]
+
+    # ── JSON ──────────────────────────────────────────────────────────────────
+    if trimmed[0] in ("{", "["):
+        try:
+            json.loads(trimmed)
+            scores["json"] = 0.98
+        except Exception:
+            scores["json"] = 0.4
+    else:
+        scores["json"] = 0.0
+
+    # ── XML ───────────────────────────────────────────────────────────────────
+    if trimmed.startswith("<?xml"):
+        scores["xml"] = 0.92
+    elif trimmed.startswith("<") and ("</" in trimmed or "/>" in trimmed):
+        scores["xml"] = 0.85
+    else:
+        scores["xml"] = 0.0
+
+    # ── HEX ───────────────────────────────────────────────────────────────────
+    tokens = trimmed[:256].split()
+    if tokens:
+        hex_ratio = sum(1 for t in tokens if _HEX_TOKEN.match(t)) / len(tokens)
+        scores["hex"] = 0.9 if hex_ratio > 0.7 else 0.0
+    else:
+        scores["hex"] = 0.0
+
+    # ── CSV ───────────────────────────────────────────────────────────────────
     if first_line.count(",") >= 2 and len(lines) > 1:
-        return "csv", 0.85
+        csv_score = 0.5
+        header_lower = first_line.lower()
+        for h in _CSV_SCORE_HEADERS:
+            if h in header_lower:
+                csv_score += 0.1
+        scores["csv"] = min(csv_score, 1.0)
+    else:
+        scores["csv"] = 0.0
 
-    if re.match(r"^\<\d+\>\d+\s+\d{4}-\d{2}-\d{2}T", first_line) or re.match(r"^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}", trimmed):
-        return "syslog", 0.82
+    # ── SYSLOG ────────────────────────────────────────────────────────────────
+    if _RFC5424.match(first_line) or _RFC3164.match(trimmed):
+        scores["syslog"] = 0.82
+    else:
+        scores["syslog"] = 0.0
 
-    kv_lines = [l for l in lines if l.strip() and "=" in l]
-    if len(kv_lines) > len(lines) * 0.5:
-        return "kv", 0.78
+    # ── KV ────────────────────────────────────────────────────────────────────
+    kv_lines = [ln for ln in lines if ln.strip() and "=" in ln]
+    kv_ratio = len(kv_lines) / max(1, len(lines))
+    scores["kv"] = kv_ratio if kv_ratio > 0.5 else 0.0
 
-    return "text", 0.6
+    # ── TEXT (fallback) ───────────────────────────────────────────────────────
+    scores["text"] = 0.5
+
+    # Pick winner
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    best_fmt, best_score = ranked[0]
+    second_score = ranked[1][1] if len(ranked) > 1 else 0.0
+
+    ambiguous = (best_score - second_score) < 0.15
+
+    return best_fmt, best_score, ambiguous

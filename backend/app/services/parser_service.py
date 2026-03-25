@@ -11,7 +11,8 @@ import logging
 
 from sqlalchemy.orm import Session
 
-from app.models import Run, Event
+from app.config import settings
+from app.models import Run, Event, FailedEvent
 from app.services.format_detector import detect_format_with_confidence
 from app.services.normalization import normalize_events
 from app.services.validation import validate_events
@@ -47,14 +48,25 @@ def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None
     """Full parse pipeline: detect -> parse -> normalize -> validate -> LLM -> store."""
     run_id = f"RUN_{uuid.uuid4().hex[:12].upper()}"
 
-    fmt, confidence = detect_format_with_confidence(content, raw_bytes)
-    logger.info("Detected format: %s (confidence=%.2f) for %s", fmt, confidence, filename)
+    fmt, confidence, ambiguous = detect_format_with_confidence(content, raw_bytes)
+    logger.info(
+        "Detected format: %s (confidence=%.2f, ambiguous=%s) for %s",
+        fmt, confidence, ambiguous, filename,
+    )
+
+    needs_review = ambiguous or confidence < 0.6
+    if needs_review:
+        logger.warning(
+            "Low-confidence or ambiguous format for %s (confidence=%.2f, ambiguous=%s)",
+            filename, confidence, ambiguous,
+        )
 
     run = Run(
         run_id=run_id,
         filename=filename,
         source_format=fmt,
         status="processing",
+        needs_review=needs_review,
     )
     db.add(run)
     db.commit()
@@ -105,8 +117,30 @@ def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None
         if dropped_duplicates > 0:
             logger.info("Dropped %d duplicate events in run %s", dropped_duplicates, run_id)
 
-        db_events = []
+        # Route failed events to the dead letter queue
+        failed_records = []
+        good_events = []
         for e in unique_events:
+            if e.get("parse_status") == "failed":
+                failed_records.append(FailedEvent(
+                    run_id=run_id,
+                    raw_line=e.get("raw_line"),
+                    raw_line_number=e.get("raw_line_number"),
+                    error=e.get("parse_error", "unknown"),
+                    parser_version=settings.parser_version,
+                ))
+            else:
+                good_events.append(e)
+
+        if failed_records:
+            db.add_all(failed_records)
+            logger.info("Routed %d events to dead letter queue for run %s", len(failed_records), run_id)
+
+        event_parse_status = "low_confidence" if needs_review else None
+
+        db_events = []
+        for e in good_events:
+            status = event_parse_status if needs_review else e.get("parse_status", "ok")
             db_events.append(Event(
                 run_id=e.get("run_id", run_id),
                 timestamp=e.get("timestamp"),
@@ -129,8 +163,9 @@ def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None
                 message=e.get("message"),
                 raw_line=e.get("raw_line"),
                 raw_line_number=e.get("raw_line_number"),
-                parse_status=e.get("parse_status", "ok"),
+                parse_status=status,
                 parse_error=e.get("parse_error"),
+                parser_version=settings.parser_version,
             ))
 
         db.add_all(db_events)
@@ -177,6 +212,8 @@ def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None
             "run_id": run_id,
             "format": fmt,
             "format_confidence": round(confidence, 3),
+            "format_ambiguous": ambiguous,
+            "needs_review": needs_review,
             "events": frontend_events,
             "rawContent": content,
             "summary": summary,
@@ -186,6 +223,7 @@ def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None
             "alarm_count": alarm_count,
             "warning_count": warning_count,
             "duplicates_dropped": dropped_duplicates,
+            "failed_events": len(failed_records),
             "status": "completed",
         }
 

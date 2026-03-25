@@ -76,8 +76,8 @@ const Index = () => {
       <div className="scanline fixed inset-0 pointer-events-none z-50" />
 
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 border-r border-border bg-card/60 backdrop-blur-lg transition-all duration-300 overflow-hidden z-30 fixed lg:relative h-screen`}>
-        <div className="flex items-center gap-2 px-3 py-4 border-b border-border">
+      <aside className={`${sidebarOpen ? 'w-56' : 'w-0'} flex-shrink-0 border-r border-border bg-card/60 backdrop-blur-lg transition-all duration-300 overflow-hidden z-30 fixed lg:relative h-screen flex flex-col`}>
+        <div className="flex-shrink-0 flex items-center gap-2 px-3 py-4 border-b border-border">
           <div className="p-1.5 rounded-lg bg-primary/10 glow-primary">
             <Cpu className="w-4 h-4 text-primary" />
           </div>
@@ -88,7 +88,7 @@ const Index = () => {
         </div>
 
         {/* Nav tabs */}
-        <nav className="py-2 overflow-y-auto h-[calc(100vh-120px)]">
+        <nav className="py-2 overflow-y-auto flex-1 min-h-0">
           {groups.map(group => {
             const groupTabs = tabs.filter(t => t.group === group);
             return (
@@ -266,7 +266,7 @@ const Index = () => {
                       const btn = document.getElementById('sync-btn');
                       if (btn) btn.innerText = 'Syncing...';
                       try {
-                        const res = await fetch('http://localhost:8000/api/ingest/sync/ETCH_01', { method: 'POST' });
+                        const res = await fetch('http://localhost:8001/api/ingest/sync/ETCH_01', { method: 'POST' });
                         const data = await res.json();
                         alert(data.status);
                       } catch (e) {

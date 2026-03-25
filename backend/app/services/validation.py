@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import re
 
+from app.utils.physical_limits import validate_physical_plausibility
+
 _ISO_LIKE = re.compile(r"\d{4}.*\d{2}.*\d{2}")
 _NUMERIC = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$")
 
@@ -26,6 +28,8 @@ def validate_events(events: list[dict]) -> list[dict]:
 
         if not e.get("tool_id") or e["tool_id"] == "UNKNOWN":
             errors.append("tool_id_missing")
+
+        errors.extend(validate_physical_plausibility(e))
 
         if errors:
             e["parse_status"] = "partial"

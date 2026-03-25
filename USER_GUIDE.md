@@ -1,11 +1,11 @@
-# Smart Semiconductor Tool Log Parser - User Guide
+# Smart Semiconductor Tool Log Parser — User Guide
 
-Version: 1.1  
-Last updated: 2026-03-14
+Version: 1.2
+Last updated: 2026-03-25
 
 This guide is written for:
 
-- non-technical users who want to understand what happens after upload
+- operators and process engineers using the platform day-to-day
 - hackathon judges reviewing practical business value
 - new engineers onboarding to tool-log analytics workflows
 
@@ -20,23 +20,30 @@ This guide is written for:
 7. [How to Use Each Dashboard](#how-to-use-each-dashboard)
 8. [Golden Run and Drift Detection](#golden-run-and-drift-detection)
 9. [Streaming Simulation](#streaming-simulation)
-10. [Troubleshooting](#troubleshooting)
-11. [FAQ](#faq)
-12. [Security and Data Handling Notes](#security-and-data-handling-notes)
-13. [Glossary](#glossary)
-14. [Support and Next Steps](#support-and-next-steps)
+10. [Industrial Ingestion via Elasticsearch](#industrial-ingestion-via-elasticsearch)
+11. [Quality Indicators: Confidence, Needs Review, and Parser Version](#quality-indicators)
+12. [Failed Events and Retry](#failed-events-and-retry)
+13. [Troubleshooting](#troubleshooting)
+14. [FAQ](#faq)
+15. [Security and Data Handling Notes](#security-and-data-handling-notes)
+16. [Glossary](#glossary)
+
+---
 
 ## What This Product Is
 
-Semiconductor equipment logs are usually large, inconsistent, and difficult to read directly.  
-This product converts those raw logs into clean, structured events and visual dashboards.
+Semiconductor equipment logs are large, inconsistent, and difficult to read directly.
+This product converts raw machine logs into clean, structured events and visual dashboards.
 
 In plain words:
 
-1. You upload a raw machine log.
-2. The system figures out its format.
-3. It extracts key information (tool, chamber, parameter, alarms, step, time).
-4. It shows results in dashboards for faster troubleshooting and decisions.
+1. You upload a raw machine log (or trigger a pull from Elasticsearch).
+2. The system determines its format automatically.
+3. It extracts key information: tool, chamber, parameter, alarms, step, time.
+4. Physical limits are checked — readings outside plausible ranges are flagged.
+5. Results appear in dashboards for faster troubleshooting and decisions.
+
+---
 
 ## Why This Matters in Semiconductor Manufacturing
 
@@ -45,28 +52,66 @@ In fab operations, a single incident can involve:
 - multiple tools and chambers
 - different log formats from different vendors
 - missing fields in some lines
-- alarms appearing before/after parameter drift
+- alarms appearing before or after parameter drift
 
-Without structure, engineers spend time manually searching text files.  
+Without structure, engineers spend time manually searching text files.
 This platform reduces that manual work and helps teams move from "raw text" to "actionable insights."
+
+---
 
 ## Before You Start
 
-You need:
+### Option A — Docker (recommended, no Node.js or Python required)
+
+Install [Docker](https://www.docker.com) once. Then:
+
+- **Mac/Linux:** run `./setup.sh` in the project root
+- **Windows:** double-click `setup.bat` or run it in Command Prompt
+
+First run downloads the AI model (10–20 minutes). Subsequent starts take a few seconds.
+
+After first setup, start with:
+
+```sh
+docker compose up
+```
+
+Open [http://localhost:8080](http://localhost:8080).
+
+### Option B — Manual setup
+
+Requirements:
 
 - Node.js 18+
 - Python 3.11+
-- project `.env` configured (especially `GROQ_API_KEY` for LLM fallback)
 
-If this is your first time:
+Configure environment:
 
 1. Copy `.env.example` to `.env`
-2. Add your `GROQ_API_KEY`
-3. Keep `.env` local only (do not commit it)
+2. Set at minimum one of:
+   - `GROQ_API_KEY` — cloud AI, good for development
+   - `OLLAMA_URL=http://localhost:11434` — local AI, no data leaves your machine
+3. Optionally set `DATABASE_URL` to a Supabase PostgreSQL connection string (defaults to local SQLite)
+4. Keep `.env` local only — do not commit it
+
+---
 
 ## Quick Start
 
-From project root:
+### Docker
+
+```sh
+# First time (downloads AI model, takes 10-20 min)
+./setup.sh        # Mac/Linux
+setup.bat         # Windows
+
+# Every time after that
+docker compose up
+```
+
+Open [http://localhost:8080](http://localhost:8080).
+
+### Manual
 
 ```sh
 npm install
@@ -77,222 +122,294 @@ npm run dev
 Open:
 
 - Frontend: `http://localhost:8080`
-- Backend API docs: `http://localhost:8000/docs`
+- Backend API docs: `http://localhost:8001/docs`
 
-`npm run dev` starts frontend and backend together.
+---
 
 ## Supported Log Types
 
-- JSON
-- XML
-- CSV
-- key-value logs
-- syslog logs (including RFC-style patterns)
-- plain text logs
-- hex logs
-- binary logs (`.bin`)
+| Format | Description |
+|--------|-------------|
+| JSON | Structured process/event objects |
+| XML | Recipe/step hierarchy from EDA tools |
+| CSV | Tabular sensor exports |
+| Key-Value | `param=value` line logs |
+| Syslog | RFC3164 and RFC5424 patterns |
+| Plain Text | Free-form log lines |
+| Hex | Hex-encoded binary tool output |
+| Binary (`.bin`) | Struct-packed tool logs |
 
-## Real-World Log Variation Examples
+The format is detected automatically from content — you do not need to tell the system what type your file is.
 
-These examples show why one parser is not enough in semiconductor environments.
-
-### Example A: Recipe/Process logs in different styles
-
-![Dose recipe XML vs event text logs](docs/images/example-dose-xml-vs-text.png)
-
-### Example B: Sensor traces across vendors
-
-![Sensor trace variations across vendors](docs/images/example-sensor-trace-variations.png)
+---
 
 ## Step-by-Step: What Happens After Upload
 
-This section explains each processing stage and why it exists.
+### Step 1 — Upload and run creation
 
-### Step 1 - Upload and run creation
+A unique `run_id` is created for every upload. All events, alarms, and dashboard data are tied to it.
 
-- A unique `run_id` is created for each upload.
-- The file is validated and safely stored.
+### Step 2 — Format detection
 
-Why: all events and dashboards must be tied to one consistent session.
+The backend inspects content patterns and bytes (not file extension).
+It scores all possible formats simultaneously and picks the highest confidence match.
 
-### Step 2 - Format detection
+Output: `format`, `confidence` (0–1), and an `ambiguous` flag when two formats score similarly.
 
-- The backend inspects content patterns and bytes (not extension alone).
-- It outputs format + confidence (for example: `syslog`, `0.82`).
+If confidence is below 0.6 or the result is ambiguous, the run is flagged `needs_review = true`.
+Parsing still continues — the flag is a signal to verify results.
 
-Why: different formats require different parsers.
+### Step 3 — Parser routing and extraction
 
-### Step 3 - Parser routing
+The file is routed to the correct deterministic parser.
+Each parser extracts: timestamp, tool/chamber context, recipe/step, parameter/value, alarms, severity, and the original raw line for traceability.
 
-- The file is routed to a specific parser path.
-- Structured logs use deterministic parser logic first.
+### Step 4 — Recovery and fallback
 
-Why: deterministic parsing is fast and reproducible.
+If the initial parse produces weak or empty results:
 
-### Step 4 - Data extraction
+1. All other deterministic parsers are tried automatically.
+2. If still uncertain, the AI (Ollama or Groq) classifies the format and re-parses ambiguous lines.
 
-The parser extracts:
+### Step 5 — Normalization
 
-- timestamp
-- tool/chamber context
-- recipe/step
-- parameter and value
-- alarms and severity clues
-- original raw line for traceability
+Vendor-specific field names are mapped to canonical names:
 
-Why: raw strings become machine-readable events.
+- `TEMP_C`, `Temp`, `temperature` → `temperature`
+- `PRESSURE_TORR`, `Pressure` → `pressure`
+- `RFPOWER`, `rf_power_w` → `rf_power`
 
-### Step 5 - Recovery and fallback
+This is required for cross-vendor comparison to work.
 
-If parse result is weak or empty:
+### Step 6 — Physical limits validation
 
-- the service tries alternative deterministic parsers
-- if still uncertain, it can use LLM-assisted classification/enhancement
+Every `PARAMETER_READING` event is checked against known physical limits:
 
-Why: imperfect files should still produce useful output.
+| Parameter | Valid range | Unit |
+|-----------|-------------|------|
+| temperature | −273.15 to 2000 | °C |
+| pressure | 0 to 10,000 | Torr |
+| rf_power | 0 to 10,000 | W |
+| gas_flow | 0 to 50,000 | sccm |
+| humidity | 0 to 100 | % |
+| voltage | −10,000 to 10,000 | V |
+| current | −1,000 to 1,000 | A |
 
-### Step 6 - Normalization
+Readings outside range are flagged in `parse_error` as `physically_implausible` and marked partial.
 
-Vendor aliases are standardized:
+### Step 7 — Validation
 
-- `TEMP_C`, `Temp`, `temperature` -> `temperature`
-- `PRESSURE_TORR`, `Pressure` -> `pressure`
-- `RFPOWER`, `rf_power_w` -> `rf_power`
+Events are validated for:
 
-Why: comparisons only work when names are consistent.
+- timestamp format
+- numeric value for `PARAMETER_READING` events
+- tool ID presence
+- physical plausibility (see Step 6)
 
-### Step 7 - Validation
+Uncertain rows are marked `parse_status=partial` — the run continues, nothing is silently dropped.
 
-Rows are validated for schema and data quality.  
-Uncertain rows are marked as partial instead of crashing the run.
+### Step 8 — Dead letter queue
 
-Why: robust system behavior even with missing information.
+Events that fully fail to parse are separated into a dead letter queue (`failed_events` table) rather than stored alongside good data.
+They can be retried later via the API (up to 3 attempts per event).
 
-### Step 8 - Deduplication
+### Step 9 — Deduplication
 
-Duplicate events are dropped within the run scope.
+Duplicate events within the same run are dropped. Counts are reported in the parse result.
 
-Why: repeated/replayed lines should not inflate charts or alarm counts.
+### Step 10 — Storage and summary
 
-### Step 9 - Storage and summary
+Events are stored in the database tagged with:
 
-- Events are saved to database tables.
-- Summary metrics are computed for dashboards.
+- `parser_version` — which version of the parser created them
+- `parse_status` — `ok`, `partial`, `low_confidence`, or `failed`
 
-Why: queries become fast and repeatable.
+Summary metrics (alarm count, warning count, stability score, tool/chamber/recipe lists) are computed and stored.
 
-### Step 10 - Dashboard and API output
+### Step 11 — Dashboard output
 
-The frontend receives:
+The frontend receives parsed events, format label and confidence, needs_review flag, summary cards, and trend/timeline data.
 
-- parsed events
-- format label and confidence
-- summary cards
-- trend/timeline data
-
-Why: users see outcomes quickly without reading raw logs manually.
+---
 
 ## How to Use Each Dashboard
 
-Use this workflow from left to right:
+| Tab | Purpose |
+|-----|---------|
+| Overview | First triage — status, alarm volume, run scope, confidence indicator |
+| Data | Detailed event table with parse_status per row |
+| Trends / Analytics | Parameter behavior over time |
+| Recipe / Timeline | Step-by-step process progression |
+| Alarms / Anomaly | Incident-focused investigation |
+| Health | Tool and chamber stability snapshot |
+| Golden Run | Baseline comparison for drift |
+| Raw Log | Source traceability — original lines vs parsed output |
+| Report | Shareable summary for handoff and reviews |
+| Architecture | Visual explanation of the pipeline |
 
-- **Overview:** first triage screen (status, alarm volume, run scope)
-- **Data:** detailed event table for exact row-level verification
-- **Trends / Analytics:** parameter behavior over time
-- **Recipe / Timeline:** step-by-step process progression
-- **Alarms / Anomaly:** incident-focused investigation
-- **Health:** tool/chamber stability snapshot
-- **Golden Run:** baseline comparison for drift
-- **Raw Log:** source traceability
-- **Report:** shareable summary for handoff and reviews
-- **Architecture:** visual explanation of pipeline
+Use this workflow left to right for a new run: Overview → Alarms → Trends → Raw Log.
+
+---
 
 ## Golden Run and Drift Detection
 
-Use a known stable run as baseline:
+1. Mark a known-stable run as golden via the run detail page.
+2. Compare any subsequent run against the golden baseline.
+3. Review deviations by parameter, tool, and chamber.
+4. Investigate high-deviation items in Trends and Raw Log.
 
-1. Mark baseline run as golden.
-2. Compare current run against golden.
-3. Review deviations by parameter/tool/chamber.
-4. Investigate high-deviation items in Trends + Raw Log.
+Drift often appears before hard alarm thresholds — catching it early reduces downtime.
 
-Why this is valuable: drift often appears before hard alarm thresholds.
+---
 
 ## Streaming Simulation
 
-For near-real-time behavior:
+For near-real-time ingestion behavior:
 
-1. Start stream session
-2. Append log chunks periodically
+1. Start a stream session via `POST /api/stream/start`
+2. Append log chunks with `POST /api/stream/append`
 3. Parse and merge continuously
-4. Finish stream and lock final status
+4. Finish with `POST /api/stream/finish`
 
-This simulates continuous fab telemetry ingestion.
+This simulates continuous fab telemetry ingestion without requiring a live tool connection.
+
+---
+
+## Industrial Ingestion via Elasticsearch
+
+The platform can pull logs directly from an Elasticsearch cluster.
+
+### With a real Elasticsearch
+
+Set in `.env`:
+
+```
+ELASTIC_URL=https://your-cluster.es.io:9200
+ELASTIC_USERNAME=elastic
+ELASTIC_PASSWORD=your-password
+ELASTIC_INDEX=fab-logs-2026
+```
+
+Then trigger a pull:
+
+```sh
+curl -X POST http://localhost:8001/api/ingest/sync/TOOL_001
+```
+
+### Without Elasticsearch (simulation mode)
+
+No configuration needed. If Elasticsearch is unreachable, the system automatically switches to mock log data and processes it through the full pipeline. This produces real runs in the dashboard.
+
+---
+
+## Quality Indicators
+
+Three signals help you assess result reliability:
+
+| Indicator | Location | Meaning |
+|-----------|----------|---------|
+| `format_confidence` | Run overview | 0–1 score for format detection certainty |
+| `needs_review` | Run list and detail | True when confidence < 0.6 or two formats scored similarly |
+| `parser_version` | Per event in Data tab | Which parser version created this event |
+
+When `needs_review` is true, verify results in the Raw Log tab before relying on them for engineering decisions.
+
+### Finding runs that need reprocessing after a parser update
+
+If a bug is fixed in a new parser version, you can find affected events:
+
+```sh
+GET /api/runs/{run_id}/reprocess-needed?min_version=1.1.0
+```
+
+Returns the count and list of run IDs with events created by older parser versions.
+
+---
+
+## Failed Events and Retry
+
+Events that could not be parsed at all are stored in a dead letter queue instead of being mixed with good data.
+
+View them:
+
+```sh
+GET /api/runs/{run_id}/failed
+```
+
+Retry them (AI fallback, up to 3 attempts per event):
+
+```sh
+POST /api/runs/{run_id}/retry-failed
+```
+
+Returns `{ "succeeded": N, "still_failing": M }`. Successfully recovered events are moved to the main events table.
+
+---
 
 ## Troubleshooting
 
-- **UI cannot load data**
-  - Confirm `npm run dev` is running in project root.
-  - Check backend docs page at `http://localhost:8000/docs`.
+| Problem | What to check |
+|---------|---------------|
+| UI cannot load data | Confirm backend is running — check `http://localhost:8001/docs` |
+| Upload rejected | Verify file extension is in the allowed list and size is within limit |
+| Blank or empty charts | Check if the run has `PARAMETER_READING` events; loosen filters |
+| Values look wrong | Compare Raw Log against Data table — look for unit/naming differences |
+| Run marked `needs_review` | Low format confidence — verify in Raw Log tab |
+| Run has partial rows | Expected for missing/ambiguous lines — check `parse_error` column |
+| Docker: `setup.sh` hangs | Confirm Docker is running; try `docker compose logs ollama` to check |
+| Elasticsearch not connecting | System falls back to simulation — check logs for `Switching to Simulation Mode` |
 
-- **Upload rejected**
-  - Verify extension is allowed and file is within size limit.
-
-- **Unexpected blank/empty charts**
-  - Check if parsed run has parameter-reading events.
-  - Confirm selected filters are not too restrictive.
-
-- **Values look wrong**
-  - Inspect `Raw Log` and compare with `Data` row values.
-  - Look for unit and naming differences from source vendor.
-
-- **Run has partial rows**
-  - This is expected for missing/ambiguous lines.
-  - Continue investigation with available complete rows and context.
+---
 
 ## FAQ
 
-### Q1: What if my file has missing fields?
-The system does not fail the entire run. It keeps processable rows, marks uncertain rows as partial, and continues.
+**Q: What if my file has missing fields?**
+The system does not fail the run. Rows with missing fields are marked `partial` and kept. The run completes with available data.
 
-### Q2: Does the system use LLM for every line?
-No. Deterministic parsing is primary. LLM is used selectively for ambiguous/partial cases.
+**Q: Does the system use AI for every line?**
+No. Deterministic parsing is primary. AI is only used for lines that the deterministic parsers could not handle.
 
-### Q3: Can I compare two runs?
-Yes. Use Golden Run comparison and drift views.
+**Q: Which AI provider is used?**
+When running via Docker, Ollama runs locally — no data leaves your machine. When configured manually, Groq cloud API is used if `GROQ_API_KEY` is set. Ollama takes priority if `OLLAMA_URL` is also set.
 
-### Q4: How do I verify parser correctness?
-Use `Raw Log` + `Data` table side-by-side and check exact mapped values.
+**Q: Can I compare two runs?**
+Yes. Use the Golden Run comparison and drift views.
 
-### Q5: Can I test without real fab logs?
-Yes. Use synthetic endpoints from backend for demo data generation.
+**Q: How do I verify parser correctness?**
+Use the Raw Log and Data tabs side by side. Check exact mapped values against source lines.
+
+**Q: Can I test without real fab logs?**
+Yes. Use the synthetic log endpoints: `GET /api/synthetic/{format}` where format is `json`, `xml`, `csv`, `kv`, `syslog`, `text`, `binary`, or `hex`.
+
+**Q: What database does this use?**
+SQLite by default (no setup needed). For production, set `DATABASE_URL` to a Supabase PostgreSQL connection string.
+
+---
 
 ## Security and Data Handling Notes
 
-- Uploads are treated as untrusted input.
-- Only approved file types are accepted.
-- File size limits are enforced.
-- XML parsing uses safe configuration.
-- API keys stay on backend (`.env`), not frontend.
-- Raw lines are preserved for audit traceability.
+- Uploads are treated as untrusted input at all stages.
+- Only approved file extensions are accepted (allowlist enforced).
+- File size limits are enforced server-side.
+- XML parsing uses a safe configuration (`defusedxml`) — no entity expansion.
+- LLM prompts explicitly instruct the model to ignore instructions in log content.
+- API keys and database credentials stay in `.env` on the backend — never exposed to the frontend.
+- Raw lines are preserved in the database for full audit traceability.
+- CSV exports are sanitized against formula injection.
+
+---
 
 ## Glossary
 
-- **Run:** one upload/processing session with its own `run_id`.
-- **Event:** one structured record extracted from raw log content.
-- **Normalization:** mapping vendor-specific names into canonical names.
-- **Partial row:** a row with missing/uncertain fields kept for context.
-- **Golden run:** a known-good baseline used for drift comparison.
-- **Drift:** measurable deviation from baseline process behavior.
-
-## Support and Next Steps
-
-Recommended first-time usage path:
-
-1. Upload sample/synthetic file.
-2. Open Overview and Data.
-3. Check Trends for `temperature`, `pressure`, `rf_power`, `gas_flow`.
-4. Review Alarms, then compare with Golden Run.
-5. Validate key findings using Raw Log.
-
-Practical outcome: faster root-cause analysis and clearer process communication.
+| Term | Definition |
+|------|------------|
+| Run | One upload/processing session with its own `run_id` |
+| Event | One structured record extracted from a raw log line |
+| Normalization | Mapping vendor-specific field names to canonical names |
+| Partial row | A row with missing or uncertain fields, kept for context |
+| Golden run | A known-good baseline used for drift comparison |
+| Drift | Measurable deviation of a parameter from baseline behavior |
+| Dead letter queue | Storage for events that fully failed to parse, pending retry |
+| Parser version | Version tag stamped on each event indicating which parser created it |
+| Needs review | Flag on a run when format detection confidence was low or ambiguous |
+| Physically implausible | A reading outside the known valid range for that parameter type |

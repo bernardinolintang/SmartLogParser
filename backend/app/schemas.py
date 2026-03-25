@@ -28,6 +28,7 @@ class EventOut(BaseModel):
     raw_line_number: Optional[int] = None
     parse_status: str = "ok"
     parse_error: Optional[str] = None
+    parser_version: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -44,6 +45,7 @@ class RunOut(BaseModel):
     total_events: int
     alarm_count: int
     warning_count: int
+    needs_review: bool = False
 
     model_config = {"from_attributes": True}
 

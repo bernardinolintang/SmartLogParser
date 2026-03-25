@@ -8,17 +8,17 @@ from dotenv import load_dotenv
 # Load credentials from your root .env
 load_dotenv()
 
-ELASTIC_URL = os.getenv("ELASTIC_URL", "https://localhost:9200")
-ELASTIC_USER = os.getenv("ELASTIC_USER", "elastic")
-ELASTIC_PASSWORD = os.getenv("ELASTIC_PASSWORD")
-ELASTIC_INDEX = os.getenv("ELASTIC_INDEX")
+ELASTIC_URL = os.getenv("ELASTIC_URL", "http://localhost:9200")
+ELASTIC_USER = os.getenv("ELASTIC_USERNAME") or os.getenv("ELASTIC_USER", "")
+ELASTIC_PASSWORD = (os.getenv("ELASTIC_PASSWORD") or "").strip()
+ELASTIC_INDEX = os.getenv("ELASTIC_INDEX", "fab-logs-2026")
 
-# Connect to Elastic
-es = Elasticsearch(
-    ELASTIC_URL,
-    basic_auth=(ELASTIC_USER, ELASTIC_PASSWORD),
-    verify_certs=False # Local dev setup
-)
+# Connect to Elastic — skip auth if no password configured (local Docker)
+_es_kwargs = {"verify_certs": False}
+if ELASTIC_USER and ELASTIC_PASSWORD:
+    _es_kwargs["basic_auth"] = (ELASTIC_USER, ELASTIC_PASSWORD)
+
+es = Elasticsearch(ELASTIC_URL, **_es_kwargs)
 
 def seed_logs():
     # 1. Create the Index if it doesn't exist
@@ -57,7 +57,7 @@ def seed_logs():
         print(f"   Logged {log_entry['tool_id']} - {log_entry['parameter']}")
         time.sleep(0.1)
 
-    print("\nDone! You can now check http://localhost:8000/api/bi/events")
+    print("\nDone! You can now check http://localhost:8001/api/bi/events")
 
 if __name__ == "__main__":
     seed_logs()

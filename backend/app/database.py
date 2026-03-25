@@ -8,6 +8,9 @@ _engine_kwargs: dict = {"pool_pre_ping": True}
 _db_backend = make_url(settings.database_url).get_backend_name()
 if _db_backend.startswith("sqlite"):
     _engine_kwargs["connect_args"] = {"check_same_thread": False}
+elif _db_backend.startswith("postgresql"):
+    _engine_kwargs["pool_size"] = 10
+    _engine_kwargs["max_overflow"] = 20
 
 engine = create_engine(settings.database_url, **_engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
