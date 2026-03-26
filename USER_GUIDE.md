@@ -275,7 +275,162 @@ This simulates continuous fab telemetry ingestion without requiring a live tool 
 
 ---
 
-## Industrial Ingestion via Elasticsearch
+## Integration Activations
+
+SmartLogParser supports multiple inputs and outputs. Here is how to activate each one.
+
+---
+
+### Integration Map
+
+```
+[Fab Tools / Files]
+       |
+       v
+[Elasticsearch] ──pull──> [SmartLogParser] ──push──> [Splunk HEC]
+       |                        |
+       v                        ├──> [Grafana]      (PostgreSQL)
+    [Kibana]                    ├──> [Tableau]       (OData live)
+                                └──> [Power BI]     (OData live)
+```
+
+---
+
+### INPUT: Elasticsearch (pull logs in)
+
+Elasticsearch stores raw fab logs. SmartLogParser pulls them in and parses them.
+
+**Is Logstash used?** No. This project uses **Elasticsearch + Kibana only** (not full ELK). Logstash is not configured — logs are loaded via `seed_data.py` directly.
+
+**Activate:**
+
+1. In `.env` set:
+```
+ELASTIC_URL=http://localhost:9200
+ELASTIC_USERNAME=elastic
+ELASTIC_PASSWORD=
+ELASTIC_INDEX=fab-logs-2026
+```
+
+2. Seed sample data (from project root):
+```sh
+pip install elasticsearch python-dotenv
+python seed_data.py
+```
+
+3. Trigger a pull for a tool:
+```sh
+# PowerShell
+Invoke-WebRequest -Method POST -Uri http://localhost:8001/api/ingest/sync/TOOL_001 -UseBasicParsing
+
+# Mac/Linux
+curl -X POST http://localhost:8001/api/ingest/sync/TOOL_001
+```
+
+4. The parsed results appear in the SmartLogParser dashboard at `http://localhost:8080`.
+
+**Simulation mode:** If Elasticsearch is unreachable, the system automatically uses mock data — no configuration needed.
+
+---
+
+### INPUT: File Upload (primary)
+
+Upload any log file through `http://localhost:8080`. Supported formats: JSON, XML, CSV, key-value, syslog, text, hex, binary.
+
+---
+
+### OUTPUT: Splunk HEC (push results out)
+
+After each Elasticsearch sync, parsed results are automatically pushed to Splunk.
+
+**Activate:**
+
+1. In Splunk, go to **Settings → Data Inputs → HTTP Event Collector** → create a new token
+2. In `.env` set:
+```
+SPLUNK_HEC_URL=https://your-splunk:8088/services/collector/event
+SPLUNK_HEC_TOKEN=your-hec-token
+```
+3. Restart the backend: `docker compose restart backend`
+4. Trigger a sync: `POST /api/ingest/sync/TOOL_001`
+5. Parsed events appear in Splunk under the `main` index
+
+**Simulation mode:** If no token is set, the backend prints simulation output in its logs. Watch with:
+```sh
+docker compose logs -f backend
+```
+
+---
+
+### OUTPUT: Kibana (search Elasticsearch data)
+
+Kibana lets you search and explore the raw logs stored in Elasticsearch.
+
+**Activate:**
+
+1. Open `http://localhost:5601`
+2. Go to **Management → Stack Management → Data Views**
+3. Create a data view with index pattern: `fab-logs-2026`
+4. Go to **Discover** to search and filter logs
+5. Use **Dashboard** to build charts
+
+**Note:** Kibana shows raw logs stored in Elasticsearch — not the parsed events from SmartLogParser. Use SmartLogParser's dashboard or Grafana/Tableau/Power BI for parsed analytics.
+
+---
+
+### OUTPUT: Grafana (dashboard from PostgreSQL)
+
+Grafana connects to the Supabase PostgreSQL database where parsed events are stored.
+
+**Activate:**
+
+1. Open `http://localhost:3030` → login: `admin` / `admin`
+2. Go to **Connections → Data Sources → Add new → PostgreSQL**
+3. Fill in your Supabase credentials from `.env`:
+   - Host: `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+   - Database: `postgres`
+   - Username/Password: from `DATABASE_URL` in `.env`
+   - TLS: enable
+4. Click **Save & Test** — should show "Database Connection OK"
+5. Create a dashboard → Add visualization → paste queries from `docs/grafana_starter_queries.sql`
+
+---
+
+### OUTPUT: Tableau (live OData feed)
+
+Tableau connects live to SmartLogParser via OData v4 — data refreshes automatically.
+
+**Activate:**
+
+1. Open Tableau Public/Desktop
+2. **Connect → To a Server → OData**
+3. Server: `http://localhost:8001/odata/`
+4. Authentication: No Authentication
+5. Click **Sign In**
+6. Select **events** or **runs** table → drag to canvas
+
+**Data refreshes** each time you click Refresh in Tableau.
+
+---
+
+### OUTPUT: Power BI (live OData feed)
+
+Power BI connects live to SmartLogParser via OData v4.
+
+**Activate:**
+
+1. Open Power BI Desktop
+2. **Get Data → OData feed**
+3. URL: `http://localhost:8001/odata/`
+4. Click **OK** → select **Anonymous** → **Connect**
+5. In Navigator, check **events** and/or **runs** → **Load**
+6. Build visuals from the Data pane
+
+**Data refreshes** each time you click Refresh in Power BI.
+
+---
+
+### Industrial Ingestion via Elasticsearch
 
 The platform can pull logs directly from an Elasticsearch cluster.
 
@@ -284,7 +439,7 @@ The platform can pull logs directly from an Elasticsearch cluster.
 Set in `.env`:
 
 ```
-ELASTIC_URL=https://your-cluster.es.io:9200
+ELASTIC_URL=http://your-cluster.es.io:9200
 ELASTIC_USERNAME=elastic
 ELASTIC_PASSWORD=your-password
 ELASTIC_INDEX=fab-logs-2026

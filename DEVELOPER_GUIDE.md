@@ -303,6 +303,7 @@ backend/app/
     golden.py              Mark golden, compare
     synthetic.py           GET /api/synthetic/{format}
     bi.py                  GET /api/bi/events|timeseries|kpis
+    odata.py               GET /odata/ service doc, /odata/events, /odata/runs (OData v4)
 
   utils/
     mappings.py            PARAMETER_MAP, TOOL_TYPE_MAP, severity mappings
@@ -453,19 +454,66 @@ All uploaded/ingested content is treated as untrusted.
 
 ---
 
-## 18. Current Production Readiness Checklist
+## 18. Integration Architecture
+
+### Data Flow
+
+```
+INPUTS                          SMARTLOGPARSER                    OUTPUTS
+------                          --------------                    -------
+File Upload ──────────────────> Parser Pipeline ──────────────> SQLite / PostgreSQL
+                                      |                               |
+Elasticsearch ──(sync API)──────>     |                    ┌─────────┼─────────────┐
+  └── Kibana (browse raw logs)        |                    v         v             v
+                                      └─> FailedEvent   Grafana  Tableau      Power BI
+                                          (dead letter)  (SQL)   (OData)      (OData)
+                                               |
+                                               └──> Splunk HEC (push)
+```
+
+### Elastic Stack Usage
+
+| Component | Included | Purpose |
+|-----------|----------|---------|
+| **Elasticsearch** | Yes (Docker) | Stores raw fab logs; pulled by ingestion bridge |
+| **Kibana** | Yes (Docker, port 5601) | Explore raw logs in Elasticsearch |
+| **Logstash** | **No** | Not included — use `seed_data.py` to load logs directly |
+
+This is an **EK** deployment (Elasticsearch + Kibana), not full ELK. To add Logstash, create a `logstash/` pipeline config in `docker-compose.yml` that reads from tool syslog and writes to `fab-logs-2026`.
+
+### OData v4 Endpoint
+
+`routes/odata.py` exposes a standards-compliant OData v4 feed consumed by Tableau and Power BI.
+
+| URL | Returns |
+|-----|---------|
+| `GET /odata/` | Service document (entity list) |
+| `GET /odata/$metadata` | EDMX XML schema |
+| `GET /odata/events?$top=100&$filter=severity eq 'alarm'` | Filtered events |
+| `GET /odata/runs` | All runs |
+
+The `$metadata` route is handled by `ODataMetadataMiddleware` in `main.py` because FastAPI's router cannot match paths containing literal `$`.
+
+---
+
+## 19. Current Production Readiness Checklist
 
 | Item | Status |
 |------|--------|
 | PostgreSQL support | Done — Supabase via `DATABASE_URL` |
 | Local AI (no cloud dependency) | Done — Ollama via Docker |
 | Elasticsearch ingestion | Done — `POST /api/ingest/sync/{tool_id}` |
+| Kibana log exploration | Done — `http://localhost:5601` |
 | Splunk HEC push | Done — automatic after each sync |
+| Grafana dashboards | Done — PostgreSQL datasource |
+| Tableau live connection | Done — OData v4 at `/odata/` |
+| Power BI live connection | Done — OData v4 at `/odata/` |
 | Dead letter queue + retry | Done |
 | Parser version tracking | Done |
 | Physical limits validation | Done |
 | Confidence-scored format detection | Done |
 | Docker deployment | Done |
+| Logstash pipeline | Not yet |
 | Async job queue for high-volume parsing | Not yet |
 | Auth/authz and rate limiting | Not yet |
 | Alembic migrations | Not yet — uses `create_all` at startup |

@@ -91,7 +91,8 @@ Semiconductor tools (plasma etch, CVD/PVD, lithography, metrology) produce high-
 - **Golden-run baseline** and drift detection
 - **Streaming ingestion** simulation
 - **Industrial bridge** — pull from Elasticsearch, push to Splunk HEC
-- **BI connectors** — Grafana, Tableau, Power BI via PostgreSQL or REST
+- **BI connectors** — Grafana (PostgreSQL), Tableau & Power BI (OData live feed), Kibana (Elasticsearch)
+- **OData v4 endpoint** — live feed at `/odata/` for any OData-compatible BI tool
 
 ---
 
@@ -201,17 +202,47 @@ Every parser emits the same contract:
 | GET | `/api/bi/kpis` | BI KPIs |
 | GET | `/api/synthetic/{format}` | Generate sample log for testing |
 
+### OData v4 (Tableau & Power BI live feed)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/odata/` | OData service document |
+| GET | `/odata/$metadata` | OData schema (EDMX XML) |
+| GET | `/odata/events` | Live events feed (supports `$top`, `$skip`, `$filter`) |
+| GET | `/odata/runs` | Live runs feed |
+
 ---
 
 ## External Integrations
 
-| System | Status | How |
-|--------|--------|-----|
-| Supabase PostgreSQL | Production DB | Set `DATABASE_URL` in `.env` |
-| Elasticsearch | Pull source | `POST /api/ingest/sync/{tool_id}` |
-| Splunk HEC | Push target | Automatic after each Elasticsearch sync |
-| Grafana | Dashboard | PostgreSQL datasource — see `docs/grafana_starter_queries.sql` |
-| Tableau / Power BI | Dashboard | PostgreSQL connector or `/api/bi/*` REST |
+### Inputs (data flows INTO SmartLogParser)
+
+| System | Role | How to Activate |
+|--------|------|-----------------|
+| File Upload | Primary input | Upload via `http://localhost:8080` |
+| Elasticsearch | Pull source | Set `ELASTIC_URL` in `.env` → `POST /api/ingest/sync/{tool_id}` |
+| Splunk (receive) | Pull via HEC | Configure Splunk forwarder to write to Elasticsearch index |
+
+### Outputs (data flows OUT of SmartLogParser)
+
+| System | Role | How to Activate |
+|--------|------|-----------------|
+| Splunk HEC | Push target | Set `SPLUNK_HEC_URL` + `SPLUNK_HEC_TOKEN` in `.env` — auto-pushes after each sync |
+| Grafana | Dashboard | Connect to Supabase PostgreSQL — `docs/grafana_starter_queries.sql` |
+| Tableau | Live dashboard | OData feed → `http://localhost:8001/odata/` |
+| Power BI | Live dashboard | OData feed → `http://localhost:8001/odata/` |
+| Kibana | Log search UI | Browse Elasticsearch index `fab-logs-2026` at `http://localhost:5601` |
+| CSV / JSON export | File export | `GET /api/runs/{run_id}/download/csv` or `/download/json` |
+
+### Elastic Stack used in this project
+
+| Component | Used | Role |
+|-----------|------|------|
+| **Elasticsearch** | Yes | Stores raw fab logs; SmartLogParser pulls from it |
+| **Kibana** | Yes | Web UI to search/explore Elasticsearch data |
+| **Logstash** | No | Not configured — logs are seeded directly via `seed_data.py` |
+
+> This project uses **EK** (Elasticsearch + Kibana), not the full ELK stack. Logstash can be added as a future enhancement to forward logs from tools directly into Elasticsearch.
 
 ---
 
