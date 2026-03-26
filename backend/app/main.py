@@ -2,11 +2,14 @@
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.database import init_db
-from app.routes import upload, runs, dashboards, stream, synthetic, bi, ingestion
+from app.routes import upload, runs, dashboards, stream, synthetic, bi, ingestion, odata
+from app.routes.odata import METADATA_XML
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -16,6 +19,18 @@ app = FastAPI(
     version="1.0.0",
 )
 
+class ODataMetadataMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        raw = request.scope.get("path", "")
+        if raw in ("/odata/$metadata", "/odata/%24metadata"):
+            return Response(
+                content=METADATA_XML,
+                media_type="application/xml",
+                headers={"OData-Version": "4.0"},
+            )
+        return await call_next(request)
+
+app.add_middleware(ODataMetadataMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,6 +46,7 @@ app.include_router(stream.router)
 app.include_router(synthetic.router)
 app.include_router(bi.router)
 app.include_router(ingestion.router)
+app.include_router(odata.router)
 
 @app.on_event("startup")
 def on_startup():
