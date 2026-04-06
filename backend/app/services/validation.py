@@ -26,7 +26,7 @@ def validate_events(events: list[dict]) -> list[dict]:
             if not _NUMERIC.match(str(val)):
                 errors.append("value_not_numeric")
 
-        if not e.get("tool_id") or e["tool_id"] == "UNKNOWN":
+        if not e.get("tool_id") or e["tool_id"] in ("UNKNOWN", "_DEFAULT"):
             errors.append("tool_id_missing")
 
         errors.extend(validate_physical_plausibility(e))

@@ -18,10 +18,10 @@ def parse_xml(content: str, run_id: str) -> list[dict]:
     except ET.ParseError:
         return events
 
-    tool_id = root.get("EquipmentID") or _child_text(root, "EquipmentID") or "UNKNOWN"
+    tool_id = root.get("EquipmentID") or _child_text(root, "EquipmentID") or ""
     recipe_id = root.get("RecipeID") or _child_text(root, "RecipeID") or ""
-    chamber_id = root.get("ChamberID") or _child_text(root, "ChamberID") or "CH_A"
-    fab_id = root.get("FabID") or _child_text(root, "FabID") or "FAB_01"
+    chamber_id = root.get("ChamberID") or _child_text(root, "ChamberID") or ""
+    fab_id = root.get("FabID") or _child_text(root, "FabID") or ""
     lot_id = root.get("LotID") or _child_text(root, "LotID")
     xml_run_id = root.get("RunID") or _child_text(root, "RunID") or run_id
     tool_type = infer_tool_type(tool_id)

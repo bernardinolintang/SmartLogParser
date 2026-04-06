@@ -25,9 +25,9 @@ class TestKvParser:
         events = self._p("timestamp=2026-01-01 equipment_id=ETCH_01 fab_id=FAB_01")
         assert events == []
 
-    def test_missing_equipment_id_unknown(self):
+    def test_missing_equipment_id_empty(self):
         events = self._p("timestamp=2026-01-01 temperature=120")
-        assert events[0]["tool_id"] == "UNKNOWN"
+        assert events[0]["tool_id"] == ""
 
     def test_quoted_values(self):
         events = self._p('timestamp=2026-01-01 equipment_id=ETCH_01 message="high temp alarm"')
@@ -82,10 +82,10 @@ class TestXmlParser:
     def test_empty_tag_empty(self):
         assert self._p("<LogData/>") == []
 
-    def test_missing_tool_id_unknown(self):
+    def test_missing_tool_id_empty(self):
         xml = '<LogData><Step id="1"><Param name="temperature" value="100"/></Step></LogData>'
         events = self._p(xml)
-        assert events[0]["tool_id"] == "UNKNOWN"
+        assert events[0]["tool_id"] == ""
 
     def test_xxe_blocked(self):
         xxe = '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><LogData><Step id="1"><Param name="test">&xxe;</Param></Step></LogData>'

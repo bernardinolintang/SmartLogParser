@@ -49,13 +49,27 @@ def detect_format_with_confidence(
     lines = trimmed.split("\n")
     first_line = lines[0]
 
-    # ── JSON ──────────────────────────────────────────────────────────────────
+    # ── JSON / NDJSON ────────────────────────────────────────────────────────
     if trimmed[0] in ("{", "["):
         try:
             json.loads(trimmed)
             scores["json"] = 0.98
         except Exception:
-            scores["json"] = 0.4
+            ndjson_count = 0
+            for ln in lines[:20]:
+                stripped = ln.strip()
+                if not stripped:
+                    continue
+                if stripped[0] in ("{", "["):
+                    try:
+                        json.loads(stripped)
+                        ndjson_count += 1
+                    except Exception:
+                        pass
+            if ndjson_count >= 2:
+                scores["json"] = 0.90
+            else:
+                scores["json"] = 0.4
     else:
         scores["json"] = 0.0
 
@@ -87,15 +101,18 @@ def detect_format_with_confidence(
         scores["csv"] = 0.0
 
     # ── SYSLOG ────────────────────────────────────────────────────────────────
-    if _RFC5424.match(first_line) or _RFC3164.match(trimmed):
+    if _RFC5424.match(first_line) or _RFC3164.match(first_line):
         scores["syslog"] = 0.82
     else:
         scores["syslog"] = 0.0
 
     # ── KV ────────────────────────────────────────────────────────────────────
-    kv_lines = [ln for ln in lines if ln.strip() and "=" in ln]
+    kv_lines = [ln for ln in lines if ln.strip() and _KV_LINE.search(ln.strip())]
     kv_ratio = len(kv_lines) / max(1, len(lines))
-    scores["kv"] = kv_ratio if kv_ratio > 0.5 else 0.0
+    if scores.get("xml", 0) > 0.5 or scores.get("json", 0) > 0.5:
+        scores["kv"] = 0.0
+    else:
+        scores["kv"] = kv_ratio if kv_ratio > 0.5 else 0.0
 
     # ── TEXT (fallback) ───────────────────────────────────────────────────────
     scores["text"] = 0.5

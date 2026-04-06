@@ -37,17 +37,17 @@ def parse_kv(content: str, run_id: str) -> list[dict]:
             continue
 
         ctx = {k: pairs.pop(k) for k in list(pairs) if k in _CONTEXT_KEYS}
-        tool_id = ctx.get("equipment_id") or ctx.get("tool_id") or "UNKNOWN"
+        tool_id = ctx.get("equipment_id") or ctx.get("tool_id") or ""
 
         for key, raw_val in pairs.items():
             val, unit = parse_value_unit(raw_val)
             events.append({
                 "run_id": ctx.get("run_id") or run_id,
                 "timestamp": ctx.get("timestamp") or "",
-                "fab_id": ctx.get("fab_id") or "FAB_01",
+                "fab_id": ctx.get("fab_id") or "",
                 "tool_id": tool_id,
                 "tool_type": infer_tool_type(tool_id),
-                "chamber_id": ctx.get("chamber_id") or "CH_A",
+                "chamber_id": ctx.get("chamber_id") or "",
                 "lot_id": ctx.get("lot_id"),
                 "wafer_id": ctx.get("wafer_id"),
                 "recipe_name": ctx.get("recipe_name") or "",

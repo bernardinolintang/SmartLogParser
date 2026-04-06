@@ -144,10 +144,10 @@ def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None
             db_events.append(Event(
                 run_id=e.get("run_id", run_id),
                 timestamp=e.get("timestamp"),
-                fab_id=e.get("fab_id", "FAB_01"),
-                tool_id=e.get("tool_id", "UNKNOWN"),
-                tool_type=e.get("tool_type", "unknown"),
-                chamber_id=e.get("chamber_id", "CH_A"),
+                fab_id=e.get("fab_id", "_DEFAULT"),
+                tool_id=e.get("tool_id", "_DEFAULT"),
+                tool_type=e.get("tool_type", "_DEFAULT"),
+                chamber_id=e.get("chamber_id", "_DEFAULT"),
                 module_id=e.get("module_id"),
                 lot_id=e.get("lot_id"),
                 wafer_id=e.get("wafer_id"),
@@ -243,6 +243,8 @@ def _event_type_to_frontend(et: str) -> str:
         "STEP_END": "step_end",
         "PROCESS_START": "process_start",
         "PROCESS_END": "process_end",
+        "PROCESS_ABORT": "alarm",
+        "DRIFT_WARNING": "warning",
         "INFO": "info",
         "STATE_CHANGE": "info",
     }

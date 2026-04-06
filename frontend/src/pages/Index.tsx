@@ -261,25 +261,37 @@ const Index = () => {
                     </div>
                   </div>
 
-                  <button 
-                    onClick={async () => {
-                      const btn = document.getElementById('sync-btn');
-                      if (btn) btn.innerText = 'Syncing...';
-                      try {
-                        const res = await fetch('http://localhost:8001/api/ingest/sync/ETCH_01', { method: 'POST' });
-                        const data = await res.json();
-                        alert(data.status);
-                      } catch (e) {
-                        alert('Sync Failed. Check if Backend & Elastic are running.');
-                      } finally {
-                        if (btn) btn.innerText = 'Sync from Fab Storage';
-                      }
-                    }}
-                    id="sync-btn"
-                    className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-sm hover:opacity-90 transition-all shadow-glow-primary"
-                  >
-                    Sync from Fab Storage
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="sync-tool-id"
+                      type="text"
+                      defaultValue="ETCH_01"
+                      placeholder="Tool ID (e.g. ETCH_01)"
+                      className="px-3 py-2 bg-background border border-border rounded-lg text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none w-40"
+                    />
+                    <button 
+                      onClick={async () => {
+                        const btn = document.getElementById('sync-btn');
+                        const input = document.getElementById('sync-tool-id') as HTMLInputElement;
+                        const toolId = input?.value?.trim() || 'ETCH_01';
+                        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+                        if (btn) btn.innerText = 'Syncing...';
+                        try {
+                          const res = await fetch(`${apiBase}/api/ingest/sync/${encodeURIComponent(toolId)}`, { method: 'POST' });
+                          const data = await res.json();
+                          alert(data.status);
+                        } catch {
+                          alert('Sync Failed. Check if Backend & Elastic are running.');
+                        } finally {
+                          if (btn) btn.innerText = 'Sync from Fab Storage';
+                        }
+                      }}
+                      id="sync-btn"
+                      className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg font-bold text-sm hover:opacity-90 transition-all shadow-glow-primary"
+                    >
+                      Sync from Fab Storage
+                    </button>
+                  </div>
                 </div>
 
                 {/* Original Streaming Monitor */}

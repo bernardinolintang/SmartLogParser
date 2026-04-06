@@ -44,7 +44,7 @@ def parse_hex(content: str, run_id: str) -> list[dict]:
     tool_match = re.search(r"[A-Z_]+\d+", ascii_text)
     return [{
         "run_id": run_id,
-        "tool_id": tool_match.group(0) if tool_match else "UNKNOWN",
+        "tool_id": tool_match.group(0) if tool_match else "",
         "event_type": "INFO",
         "parameter": "binary_payload",
         "value": ascii_text,

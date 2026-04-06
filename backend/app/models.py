@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, Index
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, Index, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship
 from datetime import datetime, timezone, UTC
 
 from app.database import Base
@@ -20,6 +21,10 @@ class Run(Base):
     warning_count = Column(Integer, default=0)
     needs_review = Column(Boolean, default=False)
 
+    events = relationship("Event", back_populates="run", cascade="all, delete-orphan")
+    drift_alerts = relationship("DriftAlert", back_populates="run", cascade="all, delete-orphan")
+    failed_events = relationship("FailedEvent", back_populates="run", cascade="all, delete-orphan")
+
 
 class Event(Base):
     __tablename__ = "events"
@@ -29,12 +34,12 @@ class Event(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    run_id = Column(String, nullable=False, index=True)
+    run_id = Column(String, ForeignKey("runs.run_id"), nullable=False, index=True)
     timestamp = Column(String)
-    fab_id = Column(String, default="FAB_01")
-    tool_id = Column(String, default="UNKNOWN")
-    tool_type = Column(String, default="unknown")  # etch, deposition, lithography, metrology
-    chamber_id = Column(String, default="CH_A")
+    fab_id = Column(String, default="_DEFAULT")
+    tool_id = Column(String, default="_DEFAULT")
+    tool_type = Column(String, default="_DEFAULT")  # etch, deposition, lithography, metrology, _DEFAULT
+    chamber_id = Column(String, default="_DEFAULT")
     module_id = Column(String)
     lot_id = Column(String)
     wafer_id = Column(String)
@@ -54,12 +59,17 @@ class Event(Base):
     parse_error = Column(String)
     parser_version = Column(String, default="1.0.0")
 
+    run = relationship("Run", back_populates="events")
+
 
 class DriftAlert(Base):
     __tablename__ = "drift_alerts"
+    __table_args__ = (
+        UniqueConstraint("run_id", "parameter", name="uq_drift_run_param"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    run_id = Column(String, nullable=False, index=True)
+    run_id = Column(String, ForeignKey("runs.run_id"), nullable=False, index=True)
     tool_id = Column(String)
     chamber_id = Column(String)
     recipe_name = Column(String)
@@ -69,13 +79,17 @@ class DriftAlert(Base):
     current_value = Column(Float)
     pct_deviation = Column(Float)
     severity = Column(String, default="info")
+    stddev_baseline = Column(Float)
+    stddev_current = Column(Float)
+
+    run = relationship("Run", back_populates="drift_alerts")
 
 
 class FailedEvent(Base):
     __tablename__ = "failed_events"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    run_id = Column(String, nullable=False, index=True)
+    run_id = Column(String, ForeignKey("runs.run_id"), nullable=False, index=True)
     raw_line = Column(Text)
     raw_line_number = Column(Integer)
     error = Column(Text)
@@ -83,6 +97,8 @@ class FailedEvent(Base):
     retry_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
     last_retry_at = Column(DateTime, nullable=True)
+
+    run = relationship("Run", back_populates="failed_events")
 
 
 class RunSummary(Base):

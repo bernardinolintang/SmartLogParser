@@ -22,7 +22,7 @@ def parse_csv(content: str, run_id: str) -> list[dict]:
             for k, v in row.items()
             if k
         }
-        tool_id = lrow.get("equipment_id") or lrow.get("tool_id") or lrow.get("equipment") or "UNKNOWN"
+        tool_id = lrow.get("equipment_id") or lrow.get("tool_id") or lrow.get("equipment") or ""
         raw_val = lrow.get("value") or lrow.get("reading") or ""
         val, inferred_unit = parse_value_unit(raw_val)
         unit = lrow.get("unit") or inferred_unit
@@ -30,10 +30,10 @@ def parse_csv(content: str, run_id: str) -> list[dict]:
         events.append({
             "run_id": lrow.get("run_id") or run_id,
             "timestamp": lrow.get("timestamp") or lrow.get("time") or "",
-            "fab_id": lrow.get("fab_id") or "FAB_01",
+            "fab_id": lrow.get("fab_id") or "",
             "tool_id": tool_id,
             "tool_type": infer_tool_type(tool_id),
-            "chamber_id": lrow.get("chamber_id") or "CH_A",
+            "chamber_id": lrow.get("chamber_id") or "",
             "lot_id": lrow.get("lot_id"),
             "wafer_id": lrow.get("wafer_id"),
             "recipe_name": lrow.get("recipe_name") or lrow.get("recipe") or "",

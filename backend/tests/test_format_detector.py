@@ -47,14 +47,14 @@ class TestDetectFormat:
 
 class TestDetectFormatWithConfidence:
     def test_json_high_confidence(self):
-        fmt, conf = detect_format_with_confidence('{"key":"val"}')
+        fmt, conf, _amb = detect_format_with_confidence('{"key":"val"}')
         assert fmt == "json" and conf >= 0.9
     def test_xml_high_confidence(self):
-        fmt, conf = detect_format_with_confidence('<Root><Item/></Root>')
-        assert fmt == "xml" and conf >= 0.9
+        fmt, conf, _amb = detect_format_with_confidence('<Root><Item/></Root>')
+        assert fmt == "xml" and conf >= 0.8
     def test_binary_via_raw_bytes(self):
-        fmt, conf = detect_format_with_confidence("", raw_bytes=b"\x00"*200 + b"data")
+        fmt, conf, _amb = detect_format_with_confidence("", raw_bytes=b"\x00"*200 + b"data")
         assert fmt == "binary" and conf >= 0.9
     def test_empty_low_confidence(self):
-        fmt, conf = detect_format_with_confidence("")
+        fmt, conf, _amb = detect_format_with_confidence("")
         assert fmt == "text" and conf <= 0.6

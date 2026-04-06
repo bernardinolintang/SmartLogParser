@@ -1,82 +1,146 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Star, TrendingUp, Check, X } from 'lucide-react';
+import { Star, TrendingUp, Check, X, Loader2, RefreshCw } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { ParsedEvent } from '@/lib/logParser';
+import { fetchRuns, markGoldenRun, compareGoldenRuns } from '@/lib/api';
+import type { RunResponse, GoldenCompareResponse } from '@/lib/api';
 
 interface GoldenRunCompareProps {
   events: ParsedEvent[];
 }
 
-interface RunSummary {
-  runId: string;
-  toolId: string;
-  chamberId: string;
-  recipe: string;
-  paramAvgs: Record<string, { avg: number; values: { time: string; value: number }[] }>;
+interface Deviation {
+  param: string;
+  golden: number | null;
+  compare: number | null;
+  absDiff: number | null;
+  pctDiff: number | null;
+  status: string;
+  stddev_baseline: number | null;
+  stddev_current: number | null;
 }
 
 export default function GoldenRunCompare({ events }: GoldenRunCompareProps) {
   const [goldenRunId, setGoldenRunId] = useState<string | null>(null);
   const [compareRunId, setCompareRunId] = useState<string | null>(null);
+  const [runs, setRuns] = useState<RunResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [comparing, setComparing] = useState(false);
+  const [markingGolden, setMarkingGolden] = useState(false);
+  const [comparison, setComparison] = useState<GoldenCompareResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const runs = useMemo((): RunSummary[] => {
-    const runGroups: Record<string, ParsedEvent[]> = {};
-    events.forEach(e => {
-      if (!runGroups[e.run_id]) runGroups[e.run_id] = [];
-      runGroups[e.run_id].push(e);
-    });
+  const loadRuns = useCallback(async () => {
+    setLoading(true);
+    try {
+      const allRuns = await fetchRuns();
+      setRuns(allRuns.filter(r => r.status === 'completed'));
+    } catch {
+      setError('Failed to load runs from server');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    return Object.entries(runGroups).map(([runId, evts]) => {
-      const paramAvgs: Record<string, { avg: number; values: { time: string; value: number }[] }> = {};
-      evts.forEach(e => {
-        const v = parseFloat(e.value);
-        if (isNaN(v)) return;
-        if (!paramAvgs[e.parameter]) paramAvgs[e.parameter] = { avg: 0, values: [] };
-        paramAvgs[e.parameter].values.push({
-          time: e.timestamp.split('T')[1]?.slice(0, 8) || e.timestamp.slice(-8),
-          value: v,
-        });
-      });
-      for (const p of Object.values(paramAvgs)) {
-        p.avg = p.values.reduce((a, b) => a + b.value, 0) / p.values.length;
-      }
+  useEffect(() => { loadRuns(); }, [loadRuns]);
+
+  const goldenRuns = useMemo(() => runs.filter(r => r.is_golden), [runs]);
+  const nonGoldenRuns = useMemo(() => runs.filter(r => !r.is_golden || r.run_id !== goldenRunId), [runs, goldenRunId]);
+
+  const handleMarkGolden = useCallback(async (runId: string) => {
+    setMarkingGolden(true);
+    try {
+      await markGoldenRun(runId);
+      await loadRuns();
+      setGoldenRunId(runId);
+    } catch {
+      setError('Failed to mark run as golden');
+    } finally {
+      setMarkingGolden(false);
+    }
+  }, [loadRuns]);
+
+  const handleCompare = useCallback(async () => {
+    if (!goldenRunId || !compareRunId) return;
+    setComparing(true);
+    setError(null);
+    try {
+      const result = await compareGoldenRuns(goldenRunId, compareRunId);
+      setComparison(result);
+    } catch {
+      setError('Failed to compare runs');
+    } finally {
+      setComparing(false);
+    }
+  }, [goldenRunId, compareRunId]);
+
+  useEffect(() => {
+    if (goldenRunId && compareRunId) handleCompare();
+    else setComparison(null);
+  }, [goldenRunId, compareRunId, handleCompare]);
+
+  const deviations = useMemo((): Deviation[] => {
+    if (!comparison) return [];
+    return (comparison.comparisons as Array<Record<string, unknown>>).map(c => {
+      const pct = c.pct_deviation as number | null;
+      const status = pct === null ? 'missing' :
+        Math.abs(pct) <= 5 ? 'normal' :
+        Math.abs(pct) <= 15 ? 'warning' : 'abnormal';
       return {
-        runId,
-        toolId: evts[0]?.tool_id || '',
-        chamberId: evts[0]?.chamber_id || '',
-        recipe: evts[0]?.recipe_name || '',
-        paramAvgs,
+        param: c.parameter as string,
+        golden: c.baseline_value as number | null,
+        compare: c.current_value as number | null,
+        absDiff: c.baseline_value != null && c.current_value != null
+          ? Math.abs((c.current_value as number) - (c.baseline_value as number))
+          : null,
+        pctDiff: pct,
+        status,
+        stddev_baseline: (c.stddev_baseline as number | null) ?? null,
+        stddev_current: (c.stddev_current as number | null) ?? null,
       };
     });
-  }, [events]);
+  }, [comparison]);
 
-  const goldenRun = runs.find(r => r.runId === goldenRunId);
-  const compareRun = runs.find(r => r.runId === compareRunId);
+  const localParamData = useMemo(() => {
+    if (!comparison) return {};
+    const data: Record<string, { golden: { time: string; value: number }[]; compare: { time: string; value: number }[] }> = {};
+    const goldenEvts = events.filter(e => e.run_id === goldenRunId);
+    const compareEvts = events.filter(e => e.run_id === compareRunId);
 
-  const deviations = useMemo(() => {
-    if (!goldenRun || !compareRun) return [];
-    const allParams = [...new Set([...Object.keys(goldenRun.paramAvgs), ...Object.keys(compareRun.paramAvgs)])];
-    return allParams.map(param => {
-      const golden = goldenRun.paramAvgs[param]?.avg ?? null;
-      const compare = compareRun.paramAvgs[param]?.avg ?? null;
-      const absDiff = golden !== null && compare !== null ? Math.abs(compare - golden) : null;
-      const pctDiff = golden !== null && compare !== null && golden !== 0 ? ((compare - golden) / golden) * 100 : null;
-      const status = pctDiff === null ? 'missing' :
-        Math.abs(pctDiff) <= 5 ? 'normal' :
-        Math.abs(pctDiff) <= 15 ? 'warning' : 'abnormal';
-      return { param, golden, compare, absDiff, pctDiff, status };
-    });
-  }, [goldenRun, compareRun]);
+    for (const e of goldenEvts) {
+      const v = parseFloat(e.value);
+      if (isNaN(v)) continue;
+      if (!data[e.parameter]) data[e.parameter] = { golden: [], compare: [] };
+      data[e.parameter].golden.push({ time: e.timestamp?.split('T')[1]?.slice(0, 8) || '', value: v });
+    }
+    for (const e of compareEvts) {
+      const v = parseFloat(e.value);
+      if (isNaN(v)) continue;
+      if (!data[e.parameter]) data[e.parameter] = { golden: [], compare: [] };
+      data[e.parameter].compare.push({ time: e.timestamp?.split('T')[1]?.slice(0, 8) || '', value: v });
+    }
+    return data;
+  }, [events, comparison, goldenRunId, compareRunId]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
-        <Star className="w-4 h-4 text-warning" />
-        Golden Run Comparison
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Star className="w-4 h-4 text-warning" />
+          Golden Run Comparison
+        </h3>
+        <button onClick={loadRuns} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> Refresh Runs
+        </button>
+      </div>
 
-      {/* Run selectors */}
+      {error && (
+        <div className="px-4 py-2 bg-destructive/10 border border-destructive/20 rounded-lg text-xs text-destructive">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="glass rounded-xl p-4">
           <label className="text-xs font-medium text-warning flex items-center gap-1.5 mb-2">
@@ -88,10 +152,26 @@ export default function GoldenRunCompare({ events }: GoldenRunCompareProps) {
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none"
           >
             <option value="">Select golden run...</option>
-            {runs.map(r => (
-              <option key={r.runId} value={r.runId}>{r.runId} ({r.toolId} · {r.recipe})</option>
-            ))}
+            {goldenRuns.length > 0 && <optgroup label="Golden Runs">
+              {goldenRuns.map(r => (
+                <option key={r.run_id} value={r.run_id}>{r.run_id} ({r.filename}) ★</option>
+              ))}
+            </optgroup>}
+            <optgroup label="All Completed Runs">
+              {runs.map(r => (
+                <option key={r.run_id} value={r.run_id}>{r.run_id} ({r.filename}){r.is_golden ? ' ★' : ''}</option>
+              ))}
+            </optgroup>
           </select>
+          {goldenRunId && !runs.find(r => r.run_id === goldenRunId)?.is_golden && (
+            <button
+              onClick={() => handleMarkGolden(goldenRunId)}
+              disabled={markingGolden}
+              className="mt-2 px-3 py-1 text-[10px] bg-warning/10 text-warning rounded-lg hover:bg-warning/20 transition-colors disabled:opacity-50"
+            >
+              {markingGolden ? 'Marking...' : 'Mark as Golden ★'}
+            </button>
+          )}
         </div>
         <div className="glass rounded-xl p-4">
           <label className="text-xs font-medium text-primary flex items-center gap-1.5 mb-2">
@@ -103,25 +183,34 @@ export default function GoldenRunCompare({ events }: GoldenRunCompareProps) {
             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground focus:ring-1 focus:ring-primary outline-none"
           >
             <option value="">Select run to compare...</option>
-            {runs.filter(r => r.runId !== goldenRunId).map(r => (
-              <option key={r.runId} value={r.runId}>{r.runId} ({r.toolId} · {r.recipe})</option>
+            {nonGoldenRuns.filter(r => r.run_id !== goldenRunId).map(r => (
+              <option key={r.run_id} value={r.run_id}>{r.run_id} ({r.filename})</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Deviation table */}
+      {comparing && (
+        <div className="flex items-center justify-center py-8 text-muted-foreground text-xs gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Comparing runs on server...
+        </div>
+      )}
+
       {deviations.length > 0 && (
         <div className="glass rounded-xl overflow-hidden">
+          <div className="px-4 py-2 border-b border-border bg-card/40 text-[10px] text-muted-foreground">
+            Server-side comparison: {comparison?.baseline_run_id} vs {comparison?.current_run_id} — {comparison?.drift_count} drift alert(s)
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Parameter</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-warning uppercase">Golden</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-primary uppercase">Compare</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Δ Abs</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-warning uppercase">Golden Avg</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-primary uppercase">Compare Avg</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">σ Base</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">σ Curr</th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Δ %</th>
                 </tr>
               </thead>
@@ -144,7 +233,10 @@ export default function GoldenRunCompare({ events }: GoldenRunCompareProps) {
                       {d.compare !== null ? d.compare.toFixed(2) : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-xs text-right font-mono text-muted-foreground">
-                      {d.absDiff !== null ? d.absDiff.toFixed(2) : '—'}
+                      {d.stddev_baseline !== null ? d.stddev_baseline.toFixed(3) : '—'}
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-right font-mono text-muted-foreground">
+                      {d.stddev_current !== null ? d.stddev_current.toFixed(3) : '—'}
                     </td>
                     <td className={`px-4 py-2.5 text-xs text-right font-mono font-medium ${
                       d.status === 'abnormal' ? 'text-destructive' : d.status === 'warning' ? 'text-warning' : 'text-muted-foreground'
@@ -164,12 +256,11 @@ export default function GoldenRunCompare({ events }: GoldenRunCompareProps) {
         </div>
       )}
 
-      {/* Overlay charts */}
-      {goldenRun && compareRun && (
+      {deviations.length > 0 && Object.keys(localParamData).length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {Object.keys(goldenRun.paramAvgs).slice(0, 4).map((param, i) => {
-            const gData = goldenRun.paramAvgs[param]?.values || [];
-            const cData = compareRun.paramAvgs[param]?.values || [];
+          {Object.keys(localParamData).slice(0, 4).map((param, i) => {
+            const gData = localParamData[param]?.golden || [];
+            const cData = localParamData[param]?.compare || [];
             const maxLen = Math.max(gData.length, cData.length);
             const merged = Array.from({ length: maxLen }, (_, idx) => ({
               idx: idx + 1,

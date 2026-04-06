@@ -31,9 +31,9 @@ class TestJsonParser:
         events = self._p(jsonlib.dumps(data))
         assert events[0]["unit"] == "C" and events[0]["value"] == "120"
 
-    def test_missing_tool_id_defaults_unknown(self):
+    def test_missing_tool_id_defaults_empty(self):
         events = self._p(jsonlib.dumps({"temperature": "120"}))
-        assert all(e["tool_id"] == "UNKNOWN" for e in events)
+        assert all(e["tool_id"] == "" for e in events)
 
     def test_invalid_json_returns_empty(self):
         assert self._p("{ not valid json }") == []
@@ -50,7 +50,7 @@ class TestJsonParser:
 
     def test_fab_id_default(self):
         events = self._p(jsonlib.dumps({"ToolID": "ETCH_01", "temp": "100"}))
-        assert events[0]["fab_id"] == "FAB_01"
+        assert events[0]["fab_id"] == ""
 
     def test_custom_fab_id(self):
         events = self._p(jsonlib.dumps({"ToolID": "ETCH_01", "FabID": "FAB_99", "temp": "100"}))
@@ -94,9 +94,9 @@ class TestCsvParser:
     def test_header_only_empty(self):
         assert self._p("timestamp,equipment_id,parameter,value") == []
 
-    def test_missing_tool_id_unknown(self):
+    def test_missing_tool_id_empty(self):
         events = self._p("timestamp,parameter,value\n2026-01-01,temperature,120")
-        assert events[0]["tool_id"] == "UNKNOWN"
+        assert events[0]["tool_id"] == ""
 
     def test_multiple_rows(self):
         content = "timestamp,equipment_id,parameter,value\n2026-01-01,ETCH_01,temperature,120\n2026-01-02,ETCH_01,pressure,0.5\n2026-01-03,ETCH_01,rf_power,500"

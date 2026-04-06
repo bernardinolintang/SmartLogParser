@@ -39,11 +39,17 @@ def normalize_events(events: list[dict]) -> list[dict]:
     return events
 
 
+_SENTINEL = "_DEFAULT"
+
 def _fill_defaults(e: dict) -> None:
-    e.setdefault("fab_id", "FAB_01")
-    e.setdefault("tool_id", "UNKNOWN")
-    e.setdefault("tool_type", "unknown")
-    e.setdefault("chamber_id", "CH_A")
+    if not e.get("fab_id"):
+        e["fab_id"] = _SENTINEL
+    if not e.get("tool_id"):
+        e["tool_id"] = _SENTINEL
+    if not e.get("tool_type"):
+        e["tool_type"] = _SENTINEL
+    if not e.get("chamber_id"):
+        e["chamber_id"] = _SENTINEL
     e.setdefault("event_type", "PARAMETER_READING")
     e.setdefault("severity", "info")
     e.setdefault("parse_status", "ok")

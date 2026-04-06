@@ -134,8 +134,8 @@ class TestNormalization:
 
     def test_defaults_filled(self):
         e = self._norm([{}])[0]
-        assert e["fab_id"] == "FAB_01" and e["tool_id"] == "UNKNOWN"
-        assert e["chamber_id"] == "CH_A" and e["event_type"] == "PARAMETER_READING"
+        assert e["fab_id"] == "_DEFAULT" and e["tool_id"] == "_DEFAULT"
+        assert e["chamber_id"] == "_DEFAULT" and e["event_type"] == "PARAMETER_READING"
         assert e["severity"] == "info" and e["parse_status"] == "ok"
 
     def test_existing_values_not_overwritten(self):
@@ -172,6 +172,10 @@ class TestValidation:
 
     def test_unknown_tool_id_partial(self):
         result = self._val([{"tool_id": "UNKNOWN", "timestamp": "2026-01-01", "event_type": "PARAMETER_READING", "value": "120"}])
+        assert result[0]["parse_status"] == "partial"
+
+    def test_default_tool_id_partial(self):
+        result = self._val([{"tool_id": "_DEFAULT", "timestamp": "2026-01-01", "event_type": "PARAMETER_READING", "value": "120"}])
         assert result[0]["parse_status"] == "partial"
 
     def test_non_numeric_value_partial(self):

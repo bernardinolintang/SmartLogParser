@@ -31,11 +31,11 @@ def parse_json(content: str, run_id: str) -> list[dict]:
     items = data if isinstance(data, list) else [data]
 
     for item in items:
-        tool_id = item.get("EquipmentID") or item.get("equipment_id") or item.get("ToolID") or item.get("tool_id") or "UNKNOWN"
+        tool_id = item.get("EquipmentID") or item.get("equipment_id") or item.get("ToolID") or item.get("tool_id") or ""
         recipe = item.get("RecipeID") or item.get("recipe_id") or item.get("RecipeName") or ""
         lot_id = item.get("LotID") or item.get("lot_id")
-        fab_id = item.get("FabID") or item.get("fab_id") or "FAB_01"
-        chamber_id = item.get("ChamberID") or item.get("chamber_id") or "CH_A"
+        fab_id = item.get("FabID") or item.get("fab_id") or ""
+        chamber_id = item.get("ChamberID") or item.get("chamber_id") or ""
         item_run_id = item.get("RunID") or item.get("run_id") or run_id
         wafer_id = item.get("WaferID") or item.get("wafer_id")
         tool_type = infer_tool_type(tool_id)

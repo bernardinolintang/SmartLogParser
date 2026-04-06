@@ -8,6 +8,11 @@ PHYSICAL_LIMITS: dict[str, tuple[float, float, str]] = {
     "humidity": (0.0, 100.0, "%"),
     "voltage": (-10000.0, 10000.0, "V"),
     "current": (-1000.0, 1000.0, "A"),
+    "pedestal_power": (0.0, 10000.0, "W"),
+    "power": (0.0, 50000.0, "W"),
+    "laser_power": (0.0, 5000.0, "W"),
+    "vibration": (0.0, 1000.0, "mm/s"),
+    "wavelength": (1.0, 100000.0, "nm"),
 }
 
 
