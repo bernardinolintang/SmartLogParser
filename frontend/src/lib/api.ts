@@ -21,6 +21,8 @@ export interface StreamAppendResponse {
   new_events: number;
   duplicates_dropped?: number;
   total_events: number;
+  alarm_count?: number;
+  warning_count?: number;
 }
 
 export interface GoldenCompareResponse {
@@ -96,6 +98,14 @@ export async function streamAppend(runId: string, lines: string): Promise<Stream
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ run_id: runId, lines }),
+  });
+}
+
+export async function streamFinish(runId: string): Promise<unknown> {
+  return fetchJson<unknown>(`${API_BASE}/api/stream/finish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ run_id: runId }),
   });
 }
 

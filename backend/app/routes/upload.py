@@ -67,6 +67,7 @@ async def parse_log_full(file: UploadFile = File(...), db: Session = Depends(get
     result = parse_file(content, file.filename or "unknown.txt", db, raw_bytes=content_bytes)
 
     return {
+        "run_id": result["run_id"],
         "format": result["format"],
         "events": result["events"],
         "rawContent": result["rawContent"],

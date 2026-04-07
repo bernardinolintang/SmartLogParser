@@ -6,6 +6,8 @@ Grafana/Tableau/Power BI ingestion.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,12 @@ from app.database import get_db
 from app.models import Event, Run
 
 router = APIRouter(prefix="/api/bi", tags=["bi"])
+
+_SENTINEL = "_DEFAULT"
+
+
+def _clean(val: str | None) -> str:
+    return "" if val == _SENTINEL else (val or "")
 
 
 def _to_float(value: str | None) -> float | None:
@@ -25,6 +33,54 @@ def _to_float(value: str | None) -> float | None:
         return float(s)
     except ValueError:
         return None
+
+
+def _parse_ts(value: str | None) -> datetime | None:
+    """Best-effort parse a timestamp string for filtering."""
+    if not value:
+        return None
+    raw = value.strip()
+    for fmt in (
+        "%Y-%b %d %H:%M:%S",
+        "%b %d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S.%f",
+    ):
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            pass
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+    return None
+
+
+def _filter_by_time(events: list, start_ts: str | None, end_ts: str | None) -> list:
+    """Post-query filter using real datetime comparison for mixed-format timestamps."""
+    if not start_ts and not end_ts:
+        return events
+    start_dt = _parse_ts(start_ts)
+    end_dt = _parse_ts(end_ts)
+    result = []
+    for e in events:
+        ts = _parse_ts(e.timestamp)
+        if ts is None:
+            continue
+        ts_naive = ts.replace(tzinfo=None) if ts.tzinfo else ts
+        if start_dt:
+            start_naive = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
+            if ts_naive < start_naive:
+                continue
+        if end_dt:
+            end_naive = end_dt.replace(tzinfo=None) if end_dt.tzinfo else end_dt
+            if ts_naive > end_naive:
+                continue
+        result.append(e)
+    return result
 
 
 @router.get("/events")
@@ -56,21 +112,20 @@ def bi_events(
         q = q.filter(Event.severity == severity)
     if event_type:
         q = q.filter(Event.event_type == event_type)
-    if start_ts:
-        q = q.filter(Event.timestamp >= start_ts)
-    if end_ts:
-        q = q.filter(Event.timestamp <= end_ts)
 
-    events = q.order_by(Event.timestamp).offset(offset).limit(limit).all()
+    all_events = q.all()
+    filtered = _filter_by_time(all_events, start_ts, end_ts)
+    page = filtered[offset : offset + limit]
+
     return [
         {
             "id": e.id,
             "run_id": e.run_id,
             "timestamp": e.timestamp,
-            "fab_id": e.fab_id,
-            "tool_id": e.tool_id,
-            "tool_type": e.tool_type,
-            "chamber_id": e.chamber_id,
+            "fab_id": _clean(e.fab_id),
+            "tool_id": _clean(e.tool_id),
+            "tool_type": _clean(e.tool_type),
+            "chamber_id": _clean(e.chamber_id),
             "module_id": e.module_id,
             "lot_id": e.lot_id,
             "wafer_id": e.wafer_id,
@@ -86,7 +141,7 @@ def bi_events(
             "message": e.message,
             "parse_status": e.parse_status,
         }
-        for e in events
+        for e in page
     ]
 
 
@@ -110,18 +165,17 @@ def bi_timeseries(
         q = q.filter(Event.run_id == run_id)
     if tool_id:
         q = q.filter(Event.tool_id == tool_id)
-    if start_ts:
-        q = q.filter(Event.timestamp >= start_ts)
-    if end_ts:
-        q = q.filter(Event.timestamp <= end_ts)
 
-    rows = q.order_by(Event.timestamp).offset(offset).limit(limit).all()
+    all_events = q.all()
+    filtered = _filter_by_time(all_events, start_ts, end_ts)
+    page = filtered[offset : offset + limit]
+
     return [
         {
             "run_id": e.run_id,
             "timestamp": e.timestamp,
-            "tool_id": e.tool_id,
-            "chamber_id": e.chamber_id,
+            "tool_id": _clean(e.tool_id),
+            "chamber_id": _clean(e.chamber_id),
             "recipe_name": e.recipe_name,
             "recipe_step": e.recipe_step,
             "parameter": e.parameter,
@@ -130,7 +184,7 @@ def bi_timeseries(
             "unit": e.unit,
             "parse_status": e.parse_status,
         }
-        for e in rows
+        for e in page
     ]
 
 

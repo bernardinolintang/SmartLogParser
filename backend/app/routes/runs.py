@@ -24,8 +24,16 @@ router = APIRouter(prefix="/api", tags=["runs"])
 
 
 @router.get("/runs")
-def list_runs(db: Session = Depends(get_db)):
-    runs = db.query(Run).order_by(Run.uploaded_at.desc()).all()
+def list_runs(
+    limit: int = Query(default=200, ge=1, le=5000),
+    offset: int = Query(default=0, ge=0),
+    status: str | None = None,
+    db: Session = Depends(get_db),
+):
+    q = db.query(Run)
+    if status:
+        q = q.filter(Run.status == status)
+    runs = q.order_by(Run.uploaded_at.desc()).offset(offset).limit(limit).all()
     return [
         {
             "run_id": r.run_id,
@@ -201,15 +209,23 @@ def download_json(run_id: str, db: Session = Depends(get_db)):
     )
 
 
+_SENTINEL = "_DEFAULT"
+
+
+def _clean(val: str | None) -> str:
+    """Replace sentinel values with empty strings for UI display."""
+    return "" if val == _SENTINEL else (val or "")
+
+
 def _event_to_dict(e: Event) -> dict:
     return {
         "id": e.id,
         "run_id": e.run_id,
         "timestamp": e.timestamp,
-        "fab_id": e.fab_id,
-        "tool_id": e.tool_id,
-        "tool_type": e.tool_type,
-        "chamber_id": e.chamber_id,
+        "fab_id": _clean(e.fab_id),
+        "tool_id": _clean(e.tool_id),
+        "tool_type": _clean(e.tool_type),
+        "chamber_id": _clean(e.chamber_id),
         "module_id": e.module_id,
         "lot_id": e.lot_id,
         "wafer_id": e.wafer_id,

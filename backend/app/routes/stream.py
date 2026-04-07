@@ -1,4 +1,4 @@
-"""Real-time streaming simulation endpoints."""
+"""Real-time streaming endpoints."""
 from __future__ import annotations
 
 import uuid
@@ -13,6 +13,7 @@ from app.services.format_detector import detect_format
 from app.services.normalization import normalize_events
 from app.services.validation import validate_events
 from app.services.llm_service import enhance_partial_events
+from app.services.summary import compute_summary
 from app.services.deduplication import deduplicate_event_dicts, existing_hashes_from_models
 from app.parsers import parse_json, parse_csv, parse_kv, parse_syslog, parse_text, parse_hex, parse_xml
 
@@ -37,6 +38,10 @@ class StreamStartRequest(BaseModel):
 class StreamAppendRequest(BaseModel):
     run_id: str
     lines: str
+
+
+class StreamFinishRequest(BaseModel):
+    run_id: str
 
 
 @router.post("/start")
@@ -75,15 +80,22 @@ def stream_append(req: StreamAppendRequest, db: Session = Depends(get_db)):
     existing_hashes = existing_hashes_from_models(existing_events)
     unique_events, dropped_duplicates, _ = deduplicate_event_dicts(validated, existing_hashes)
 
+    batch_alarms = 0
+    batch_warnings = 0
     db_events = []
     for e in unique_events:
+        sev = e.get("severity", "info")
+        if sev in ("alarm", "critical"):
+            batch_alarms += 1
+        elif sev == "warning":
+            batch_warnings += 1
         db_events.append(Event(
             run_id=e.get("run_id", req.run_id),
             timestamp=e.get("timestamp"),
-            fab_id=e.get("fab_id", "FAB_01"),
-            tool_id=e.get("tool_id", "UNKNOWN"),
-            tool_type=e.get("tool_type", "unknown"),
-            chamber_id=e.get("chamber_id", "CH_A"),
+            fab_id=e.get("fab_id", "_DEFAULT"),
+            tool_id=e.get("tool_id", "_DEFAULT"),
+            tool_type=e.get("tool_type", "_DEFAULT"),
+            chamber_id=e.get("chamber_id", "_DEFAULT"),
             recipe_name=e.get("recipe_name"),
             recipe_step=e.get("recipe_step"),
             event_type=e.get("event_type", "PARAMETER_READING"),
@@ -91,7 +103,7 @@ def stream_append(req: StreamAppendRequest, db: Session = Depends(get_db)):
             value=e.get("value"),
             unit=e.get("unit"),
             alarm_code=e.get("alarm_code"),
-            severity=e.get("severity", "info"),
+            severity=sev,
             message=e.get("message"),
             raw_line=e.get("raw_line"),
             raw_line_number=e.get("raw_line_number"),
@@ -100,6 +112,8 @@ def stream_append(req: StreamAppendRequest, db: Session = Depends(get_db)):
 
     db.add_all(db_events)
     run.total_events = (run.total_events or 0) + len(db_events)
+    run.alarm_count = (run.alarm_count or 0) + batch_alarms
+    run.warning_count = (run.warning_count or 0) + batch_warnings
     db.commit()
 
     return {
@@ -107,14 +121,26 @@ def stream_append(req: StreamAppendRequest, db: Session = Depends(get_db)):
         "new_events": len(db_events),
         "duplicates_dropped": dropped_duplicates,
         "total_events": run.total_events,
+        "alarm_count": run.alarm_count,
+        "warning_count": run.warning_count,
     }
 
 
 @router.post("/finish")
-def stream_finish(run_id: str, db: Session = Depends(get_db)):
-    run = db.query(Run).filter(Run.run_id == run_id).first()
+def stream_finish(req: StreamFinishRequest, db: Session = Depends(get_db)):
+    run = db.query(Run).filter(Run.run_id == req.run_id).first()
     if not run:
         raise HTTPException(status_code=404, detail="Stream session not found")
     run.status = "completed"
     db.commit()
-    return {"run_id": run_id, "status": "completed", "total_events": run.total_events}
+
+    summary = compute_summary(db, req.run_id)
+
+    return {
+        "run_id": req.run_id,
+        "status": "completed",
+        "total_events": run.total_events,
+        "alarm_count": run.alarm_count,
+        "warning_count": run.warning_count,
+        "summary": summary,
+    }

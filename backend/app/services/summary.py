@@ -7,6 +7,37 @@ from sqlalchemy.orm import Session
 
 from app.models import Event, RunSummary
 
+_SENTINEL = "_DEFAULT"
+
+
+def _parse_ts(value: str | None) -> datetime | None:
+    """Best-effort timestamp parser supporting ISO, syslog RFC3164, and common formats."""
+    if not value:
+        return None
+    raw = value.strip()
+    if not raw:
+        return None
+
+    for fmt in (
+        "%Y-%b %d %H:%M:%S",           # syslog parser output
+        "%b %d %H:%M:%S",               # RFC3164 syslog (no year)
+        "%Y-%m-%d %H:%M:%S",            # common datetime
+        "%Y-%m-%dT%H:%M:%S",            # ISO without tz
+        "%Y-%m-%d %H:%M:%S.%f",         # with microseconds
+        "%Y-%m-%dT%H:%M:%S.%f",         # ISO with microseconds
+    ):
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            pass
+
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+
+    return None
+
 
 def compute_summary(db: Session, run_id: str) -> dict:
     events = db.query(Event).filter(Event.run_id == run_id).all()
@@ -35,18 +66,23 @@ def compute_summary(db: Session, run_id: str) -> dict:
 
     alarm_count = sum(1 for e in events if e.severity in ("alarm", "critical"))
     warning_count = sum(1 for e in events if e.severity == "warning")
-    timestamps = sorted(e.timestamp for e in events if e.timestamp)
+    failed = sum(1 for e in events if e.parse_status == "failed")
+
+    ts_pairs = [(e.timestamp, _parse_ts(e.timestamp)) for e in events if e.timestamp]
+    parsed_pairs = [(raw, dt) for raw, dt in ts_pairs if dt is not None]
+    parsed_pairs.sort(key=lambda p: p[1])
+    sorted_ts_raw = [raw for raw, _ in parsed_pairs]
 
     alarm_codes = [e.alarm_code for e in events if e.alarm_code]
     top_alarm = max(set(alarm_codes), key=alarm_codes.count) if alarm_codes else None
 
     total = len(events)
-    failed = sum(1 for e in events if e.parse_status == "failed")
-    stability = 1.0 - (alarm_count / total) if total else 1.0
+    stability = 1.0 - ((alarm_count + warning_count) / total) if total else 1.0
+    process_success = alarm_count == 0 and failed == 0
 
-    fab_ids = sorted(set(e.fab_id for e in events if e.fab_id))
-    tool_ids = sorted(set(e.tool_id for e in events if e.tool_id))
-    chamber_ids = sorted(set(e.chamber_id for e in events if e.chamber_id))
+    fab_ids = sorted(set(e.fab_id for e in events if e.fab_id and e.fab_id != _SENTINEL))
+    tool_ids = sorted(set(e.tool_id for e in events if e.tool_id and e.tool_id != _SENTINEL))
+    chamber_ids = sorted(set(e.chamber_id for e in events if e.chamber_id and e.chamber_id != _SENTINEL))
     recipe_names = sorted(set(e.recipe_name for e in events if e.recipe_name))
     parameters = sorted(set(e.parameter for e in events if e.parameter))
     cadence_ms, cadence_type = _infer_cadence(events)
@@ -56,7 +92,7 @@ def compute_summary(db: Session, run_id: str) -> dict:
         alarm_count=alarm_count,
         warning_count=warning_count,
         total_events=total,
-        process_success=alarm_count == 0,
+        process_success=process_success,
         stability_score=round(stability, 3),
         top_alarm=top_alarm,
         fab_ids=",".join(fab_ids),
@@ -64,8 +100,8 @@ def compute_summary(db: Session, run_id: str) -> dict:
         chamber_ids=",".join(chamber_ids),
         recipe_names=",".join(recipe_names),
         parameters=",".join(parameters),
-        time_start=timestamps[0] if timestamps else None,
-        time_end=timestamps[-1] if timestamps else None,
+        time_start=sorted_ts_raw[0] if sorted_ts_raw else None,
+        time_end=sorted_ts_raw[-1] if sorted_ts_raw else None,
     )
 
     existing = db.query(RunSummary).filter(RunSummary.run_id == run_id).first()
@@ -83,7 +119,7 @@ def compute_summary(db: Session, run_id: str) -> dict:
         "totalEvents": total,
         "alarms": alarm_count,
         "warnings": warning_count,
-        "process_success": alarm_count == 0,
+        "process_success": process_success,
         "stability_score": round(stability, 3),
         "top_alarm": top_alarm,
         "fabIds": fab_ids,
@@ -92,8 +128,8 @@ def compute_summary(db: Session, run_id: str) -> dict:
         "recipeNames": recipe_names,
         "parameters": parameters,
         "timeRange": {
-            "start": timestamps[0] if timestamps else "",
-            "end": timestamps[-1] if timestamps else "",
+            "start": sorted_ts_raw[0] if sorted_ts_raw else "",
+            "end": sorted_ts_raw[-1] if sorted_ts_raw else "",
         },
         "equipmentIds": tool_ids,
         "runIds": [run_id],
@@ -130,24 +166,3 @@ def _infer_cadence(events: list[Event]) -> tuple[float | None, str]:
     else:
         cadence_type = "event_driven"
     return med, cadence_type
-
-
-def _parse_ts(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    raw = value.strip()
-    if not raw:
-        return None
-
-    # Common format from syslog parser: "YYYY-Mon DD HH:MM:SS"
-    for fmt in ("%Y-%b %d %H:%M:%S",):
-        try:
-            return datetime.strptime(raw, fmt)
-        except ValueError:
-            pass
-
-    # ISO variants (including Z suffix)
-    try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        return None

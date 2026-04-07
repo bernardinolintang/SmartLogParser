@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Activity, Thermometer, Gauge, Zap } from 'lucide-react';
@@ -17,34 +17,39 @@ const CHART_COLORS = [
   'hsl(270, 60%, 55%)',
 ];
 
+function compactTimestamp(ts: string): string {
+  if (!ts) return '';
+  const dateMatch = ts.match(/(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2})/);
+  if (dateMatch) {
+    return `${dateMatch[1].slice(5)} ${dateMatch[2]}`;
+  }
+  return ts.split('T')[1]?.slice(0, 8) || ts.slice(-8);
+}
+
 export default function AnalyticsDashboard({ events }: AnalyticsDashboardProps) {
   const stats = useMemo(() => {
     const numericEvents = events.filter(e => !isNaN(parseFloat(e.value)));
     
-    // Parameter distribution
     const paramCounts: Record<string, number> = {};
     events.forEach(e => { paramCounts[e.parameter] = (paramCounts[e.parameter] || 0) + 1; });
     const paramDistribution = Object.entries(paramCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
-    // Equipment event counts
     const equipCounts: Record<string, number> = {};
     events.forEach(e => { equipCounts[e.equipment_id] = (equipCounts[e.equipment_id] || 0) + 1; });
     const equipmentData = Object.entries(equipCounts)
       .map(([name, events]) => ({ name, events }));
 
-    // Parameter trends (numeric values over time)
     const paramGroups: Record<string, { time: string; value: number }[]> = {};
     numericEvents.forEach(e => {
       if (!paramGroups[e.parameter]) paramGroups[e.parameter] = [];
       paramGroups[e.parameter].push({
-        time: e.timestamp.split('T')[1]?.slice(0, 8) || e.timestamp.slice(-8),
+        time: compactTimestamp(e.timestamp),
         value: parseFloat(e.value),
       });
     });
 
-    // Top parameters with averages
     const paramAvgs: { parameter: string; avg: number; min: number; max: number }[] = [];
     for (const [param, vals] of Object.entries(paramGroups)) {
       const values = vals.map(v => v.value);
@@ -59,15 +64,18 @@ export default function AnalyticsDashboard({ events }: AnalyticsDashboardProps) 
     return { paramDistribution, equipmentData, paramGroups, paramAvgs };
   }, [events]);
 
-  // Pick a numeric param for the trend chart
-  const trendParam = Object.keys(stats.paramGroups)[0];
-  const trendData = trendParam ? stats.paramGroups[trendParam] : [];
+  const paramKeys = Object.keys(stats.paramGroups);
+  const [trendParam, setTrendParam] = useState<string>(paramKeys[0] || '');
+  if (trendParam && !paramKeys.includes(trendParam) && paramKeys.length > 0) {
+    setTrendParam(paramKeys[0]);
+  }
+  const trendData = trendParam ? (stats.paramGroups[trendParam] || []) : [];
 
   const summaryCards = [
     { icon: Activity, label: 'Total Events', value: events.length, color: 'text-primary' },
     { icon: Thermometer, label: 'Parameters', value: stats.paramDistribution.length, color: 'text-success' },
     { icon: Gauge, label: 'Equipment', value: stats.equipmentData.length, color: 'text-info' },
-    { icon: Zap, label: 'Alarms', value: events.filter(e => e.severity === 'alarm').length, color: 'text-destructive' },
+    { icon: Zap, label: 'Alarms', value: events.filter(e => e.severity === 'alarm' || e.severity === 'critical').length, color: 'text-destructive' },
   ];
 
   return (
@@ -96,16 +104,27 @@ export default function AnalyticsDashboard({ events }: AnalyticsDashboardProps) 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Parameter trend */}
-        {trendData.length > 0 && (
+        {paramKeys.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="glass rounded-xl p-5"
           >
-            <h3 className="text-sm font-medium text-foreground mb-4 capitalize">
-              {trendParam} Trend
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-foreground capitalize">
+                {trendParam} Trend
+              </h3>
+              <select
+                value={trendParam}
+                onChange={e => setTrendParam(e.target.value)}
+                className="bg-background border border-border rounded-lg px-2 py-1 text-xs text-foreground"
+              >
+                {paramKeys.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 18%)" />
@@ -144,6 +163,7 @@ export default function AnalyticsDashboard({ events }: AnalyticsDashboardProps) 
                 outerRadius={90}
                 paddingAngle={3}
                 dataKey="value"
+                nameKey="name"
               >
                 {stats.paramDistribution.map((_, i) => (
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />

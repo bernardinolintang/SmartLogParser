@@ -28,15 +28,19 @@ async def receive_splunk_webhook(payload: dict, db: Session = Depends(get_db)):
     """
     Splunk → SmartLogParser push endpoint.
 
-    Configure in Splunk:
-      Settings → Searches, Reports, and Alerts → (your alert) →
-      Edit Alert Actions → Webhook → URL: http://<host>:8001/api/ingest/splunk-webhook
-
-    Splunk sends a JSON payload with a 'result' key containing the matching event.
+    Accepts both Splunk Alert Webhook payloads (result._raw) and
+    Splunk HEC-style payloads (event field at top level).
     """
-    result_data = payload.get("result", {})
-    # Splunk stores the raw log line in _raw
-    raw_log = result_data.get("_raw") or result_data.get("message") or str(result_data)
+    raw_log: str | None = None
+    if "result" in payload:
+        result_data = payload["result"]
+        raw_log = result_data.get("_raw") or result_data.get("message") or str(result_data)
+    elif "event" in payload:
+        evt = payload["event"]
+        raw_log = evt if isinstance(evt, str) else str(evt)
+    else:
+        raw_log = payload.get("_raw") or payload.get("message") or payload.get("log") or str(payload)
+
     search_name = payload.get("search_name", "splunk_alert")
     sid = payload.get("sid", "unknown")
     filename = f"splunk_{search_name}_{sid}.log"
@@ -93,17 +97,26 @@ async def receive_from_logstash(payload: dict, db: Session = Depends(get_db)):
 async def receive_batch_from_logstash(payload: List[dict], db: Session = Depends(get_db)):
     """
     Logstash batch endpoint — receives multiple events at once.
-    Use with Logstash's aggregate filter or batch_size setting.
+    Concatenates all messages into a single file so they parse as one Run.
     """
-    results = []
+    lines: list[str] = []
+    tool_id = "UNKNOWN"
     for event in payload:
         message = event.get("message") or event.get("log") or str(event)
-        tool_id = event.get("tool_id", "UNKNOWN")
-        filename = f"logstash_batch_{tool_id}.log"
-        result = parse_file(message, filename, db)
-        results.append({"run_id": result.get("run_id"), "tool_id": tool_id})
+        lines.append(message)
+        tool_id = event.get("tool_id", tool_id)
 
-    return {"status": "parsed", "source": "logstash_batch", "count": len(results), "runs": results}
+    combined = "\n".join(lines)
+    filename = f"logstash_batch_{tool_id}.log"
+    result = parse_file(combined, filename, db)
+
+    return {
+        "status": "parsed",
+        "source": "logstash_batch",
+        "count": len(lines),
+        "run_id": result.get("run_id"),
+        "total_events": result.get("total_events", 0),
+    }
 
 
 @router.post("/webhook")

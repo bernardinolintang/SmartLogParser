@@ -45,24 +45,36 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
       await new Promise(r => setTimeout(r, 300));
       setProcessing(false);
       onParsed(result as ParseResult, file.name);
-    } catch {
-      setStatusMsg('Backend unavailable, falling back to client...');
-      await new Promise(r => setTimeout(r, 400));
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const content = e.target?.result as string;
-        setProcessing(true);
-        setDetectedFormat(null);
-        setStatusMsg('Detecting format...');
+    } catch (err: unknown) {
+      const isNetworkError = err instanceof TypeError && (
+        err.message.includes('fetch') || err.message.includes('network') || err.message.includes('Failed')
+      );
+      if (isNetworkError) {
+        setStatusMsg('Backend unavailable, falling back to client...');
+        setBackendUp(false);
+        setParseMode('client');
         await new Promise(r => setTimeout(r, 400));
-        const result = parseLog(content);
-        setDetectedFormat(result.format);
-        setStatusMsg('Building dashboard...');
-        await new Promise(r => setTimeout(r, 400));
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const content = e.target?.result as string;
+          setProcessing(true);
+          setDetectedFormat(null);
+          setStatusMsg('Detecting format...');
+          await new Promise(r => setTimeout(r, 400));
+          const result = parseLog(content);
+          setDetectedFormat(result.format);
+          setStatusMsg('Building dashboard...');
+          await new Promise(r => setTimeout(r, 400));
+          setProcessing(false);
+          onParsed(result, file.name);
+        };
+        reader.readAsText(file);
+      } else {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setStatusMsg(`Backend error: ${msg.slice(0, 80)}`);
+        await new Promise(r => setTimeout(r, 2000));
         setProcessing(false);
-        onParsed(result, file.name);
-      };
-      reader.readAsText(file);
+      }
     }
   }, [onParsed]);
 

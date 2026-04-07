@@ -6,7 +6,7 @@ from __future__ import annotations
 
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.utils.mappings import normalize_parameter, infer_tool_type
 from app.utils.unit_parser import parse_value_unit
@@ -45,7 +45,7 @@ def parse_json(content: str, run_id: str) -> list[dict]:
             for step in steps:
                 step_id = step.get("StepID") or step.get("step_id") or step.get("id") or ""
                 step_name = step.get("StepName") or step.get("step_name") or str(step_id)
-                ts = step.get("Timestamp") or step.get("timestamp") or item.get("Timestamp") or datetime.utcnow().isoformat()
+                ts = step.get("Timestamp") or step.get("timestamp") or item.get("Timestamp") or datetime.now(timezone.utc).isoformat()
                 params = step.get("Parameters") or step.get("parameters") or step.get("params") or {}
 
                 for key, val in params.items():
@@ -74,7 +74,7 @@ def parse_json(content: str, run_id: str) -> list[dict]:
                         "parse_status": "ok",
                     })
         else:
-            ts = item.get("Timestamp") or item.get("timestamp") or datetime.utcnow().isoformat()
+            ts = item.get("Timestamp") or item.get("timestamp") or datetime.now(timezone.utc).isoformat()
             for key, val in item.items():
                 if key in _SKIP_KEYS:
                     continue

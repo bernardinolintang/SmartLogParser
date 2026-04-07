@@ -15,7 +15,7 @@ export default function ToolHealthDashboard({ events }: ToolHealthDashboardProps
     const chamberStats = chambers.map(key => {
       const [toolId, chamberId] = key.split('|');
       const chEvents = events.filter(e => e.tool_id === toolId && e.chamber_id === chamberId);
-      const alarms = chEvents.filter(e => e.severity === 'alarm').length;
+      const alarms = chEvents.filter(e => e.severity === 'alarm' || e.severity === 'critical').length;
       const warnings = chEvents.filter(e => e.severity === 'warning').length;
       const total = chEvents.length;
 

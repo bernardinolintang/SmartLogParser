@@ -17,7 +17,7 @@ export interface ParsedEvent {
   run_id: string;
   lot_id?: string;
   wafer_id?: string;
-  severity?: 'info' | 'warning' | 'alarm';
+  severity?: 'info' | 'warning' | 'alarm' | 'critical';
   // Keep legacy compat
   equipment_id: string;
   step_id?: string;
@@ -73,13 +73,13 @@ export function detectFormat(content: string): LogFormat {
 }
 
 function makeEvent(partial: Partial<ParsedEvent>): ParsedEvent {
-  const toolId = partial.tool_id || partial.equipment_id || 'UNKNOWN';
+  const toolId = partial.tool_id || partial.equipment_id || '';
   return {
     timestamp: partial.timestamp || new Date().toISOString(),
-    fab_id: partial.fab_id || 'FAB_01',
+    fab_id: partial.fab_id || '',
     tool_id: toolId,
-    chamber_id: partial.chamber_id || 'CH_A',
-    recipe_name: partial.recipe_name || partial.recipe_id || 'UNKNOWN',
+    chamber_id: partial.chamber_id || '',
+    recipe_name: partial.recipe_name || partial.recipe_id || '',
     recipe_step: partial.recipe_step || partial.step_id || '',
     event_type: partial.event_type || 'sensor',
     parameter: partial.parameter || '',
@@ -104,11 +104,11 @@ function parseJSON(content: string): ParsedEvent[] {
     for (const item of items) {
       if (!item || typeof item !== 'object') continue;
       const row = item as Record<string, unknown>;
-      const toolId = String(row.EquipmentID || row.equipment_id || row.ToolID || row.tool_id || 'UNKNOWN');
+      const toolId = String(row.EquipmentID || row.equipment_id || row.ToolID || row.tool_id || '');
       const recipeId = String(row.RecipeID || row.recipe_id || row.RecipeName || '');
       const lotId = row.LotID || row.lot_id ? String(row.LotID || row.lot_id) : undefined;
-      const fabId = String(row.FabID || row.fab_id || 'FAB_01');
-      const chamberId = String(row.ChamberID || row.chamber_id || 'CH_A');
+      const fabId = String(row.FabID || row.fab_id || '');
+      const chamberId = String(row.ChamberID || row.chamber_id || '');
       const runId = String(row.RunID || row.run_id || `RUN_${toolId.slice(-2)}_001`);
 
       if (row.ProcessSteps || row.steps) {
@@ -173,9 +173,9 @@ function parseCSV(content: string): ParsedEvent[] {
     headers.forEach((h, idx) => { row[h] = vals[idx] || ''; });
     events.push(makeEvent({
       timestamp: row['timestamp'] || row['time'] || new Date().toISOString(),
-      fab_id: row['fab_id'] || 'FAB_01',
-      tool_id: row['equipment_id'] || row['tool_id'] || row['equipment'] || 'UNKNOWN',
-      chamber_id: row['chamber_id'] || 'CH_A',
+      fab_id: row['fab_id'] || '',
+      tool_id: row['equipment_id'] || row['tool_id'] || row['equipment'] || '',
+      chamber_id: row['chamber_id'] || '',
       recipe_name: row['recipe_name'] || row['recipe'] || '',
       recipe_step: row['step_id'] || row['step'] || row['recipe_step'] || '',
       event_type: (row['event_type'] as ParsedEvent['event_type']) || 'sensor',
@@ -197,9 +197,9 @@ function parseXML(content: string): ParsedEvent[] {
   const doc = parser.parseFromString(content, 'text/xml');
   const steps = doc.querySelectorAll('Step');
   const root = doc.documentElement;
-  const toolId = root.getAttribute('EquipmentID') || root.querySelector('EquipmentID')?.textContent || 'UNKNOWN';
+  const toolId = root.getAttribute('EquipmentID') || root.querySelector('EquipmentID')?.textContent || '';
   const recipeId = root.getAttribute('RecipeID') || root.querySelector('RecipeID')?.textContent || '';
-  const chamberId = root.getAttribute('ChamberID') || 'CH_A';
+  const chamberId = root.getAttribute('ChamberID') || '';
 
   if (steps.length > 0) {
     steps.forEach(step => {
@@ -234,7 +234,7 @@ function parseSyslog(content: string): ParsedEvent[] {
       const kvPairs = rest.match(/(\w+)=(\S+)/g);
       const isAlarm = category === 'ALARM';
       const isWarning = category === 'WARNING';
-      const severity = isAlarm ? 'alarm' : isWarning ? 'warning' : 'info';
+      const severity: ParsedEvent['severity'] = isAlarm ? 'alarm' : isWarning ? 'warning' : 'info';
       const eventType: ParsedEvent['event_type'] = isAlarm ? 'alarm' : isWarning ? 'warning' : 'sensor';
       if (kvPairs) {
         for (const kv of kvPairs) {
@@ -274,7 +274,7 @@ function parseHex(content: string): ParsedEvent[] {
   }).join('');
 
   return [makeEvent({
-    tool_id: ascii.match(/[A-Z_]+\d+/)?.[0] || 'UNKNOWN',
+    tool_id: ascii.match(/[A-Z_]+\d+/)?.[0] || '',
     parameter: 'binary_payload',
     value: ascii,
     event_type: 'info',
@@ -293,7 +293,7 @@ function parseKeyValue(content: string): ParsedEvent[] {
     }
     if (Object.keys(pairs).length > 0) {
       const timestamp = pairs['timestamp'] || new Date().toISOString();
-      const toolId = pairs['equipment_id'] || pairs['tool_id'] || 'UNKNOWN';
+      const toolId = pairs['equipment_id'] || pairs['tool_id'] || '';
       delete pairs['timestamp'];
       delete pairs['equipment_id'];
       delete pairs['tool_id'];
@@ -366,7 +366,7 @@ export function parseLog(content: string): ParseResult {
         start: timestamps[0] || '',
         end: timestamps[timestamps.length - 1] || '',
       },
-      alarms: events.filter(e => e.severity === 'alarm').length,
+      alarms: events.filter(e => e.severity === 'alarm' || e.severity === 'critical').length,
       warnings: events.filter(e => e.severity === 'warning').length,
       fabIds: [...new Set(events.map(e => e.fab_id))],
       toolIds: [...new Set(events.map(e => e.tool_id))],
