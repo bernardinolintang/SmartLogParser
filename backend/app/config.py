@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     llm_batch_size: int = 25
     parser_version: str = "1.1.0"
 
+    cors_origins: str = ""  # comma-separated extra allowed origins for production
+
     splunk_hec_url: str = ""
     splunk_hec_token: str = ""
     elastic_url: str = "https://localhost:9200"
