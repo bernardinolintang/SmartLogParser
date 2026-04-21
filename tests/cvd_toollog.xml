@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ToolLog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" SchemaVersion="3.2">
+  <Header>
+    <EquipmentID>DEPO_TOOL_CVD_03</EquipmentID>
+    <ToolType>CVD</ToolType>
+    <FabID>FAB_SG_01</FabID>
+    <VendorID>LAM_RESEARCH</VendorID>
+    <LotID>LOT_20260305_B</LotID>
+    <WaferID>WFR_012</WaferID>
+    <RecipeID>RCP_CVD_07</RecipeID>
+    <OperatorID>OP_4421</OperatorID>
+    <StartTime>2026-03-05T11:20:00Z</StartTime>
+    <EndTime>2026-03-05T12:05:33Z</EndTime>
+    <ProcessResult>WARNING</ProcessResult>
+    <TotalSteps>5</TotalSteps>
+  </Header>
+
+  <Chambers>
+    <Chamber id="CHA" name="Chamber_A" type="Process"/>
+    <Chamber id="CHB" name="Chamber_B" type="Process"/>
+    <Chamber id="CHT" name="Transfer_Module" type="Transfer"/>
+  </Chambers>
+
+  <Steps>
+    <Step id="1" name="PumpDown" timestamp="2026-03-05T11:20:05Z" chamber="CHA" duration_s="120">
+      <Param name="ChamberPressure" unit="Torr">2.50</Param>
+      <Param name="PumpSpeed" unit="rpm">1800</Param>
+      <Param name="Temperature" unit="C">22.0</Param>
+      <Param name="N2_Purge_Flow" unit="sccm">500.0</Param>
+      <Status>COMPLETE</Status>
+    </Step>
+    <Step id="2" name="GasSetup" timestamp="2026-03-05T11:22:05Z" chamber="CHA" duration_s="180">
+      <Param name="GasFlow_SiH4" unit="sccm">120.0</Param>
+      <Param name="GasFlow_N2" unit="sccm">300.0</Param>
+      <Param name="GasFlow_NH3" unit="sccm">80.0</Param>
+      <Param name="ChamberPressure" unit="Torr">5.20</Param>
+      <Param name="Temperature" unit="C">350.0</Param>
+      <Param name="HeaterPower" unit="W">2200.0</Param>
+      <Status>COMPLETE</Status>
+    </Step>
+    <Step id="3" name="Deposition" timestamp="2026-03-05T11:25:05Z" chamber="CHA" duration_s="1500">
+      <Param name="Temperature" unit="C">400.0</Param>
+      <Param name="ChamberPressure" unit="Torr">1.1</Param>
+      <Param name="RF_Power" unit="W">350.0</Param>
+      <Param name="GasFlow_SiH4" unit="sccm">120.0</Param>
+      <Param name="GasFlow_N2" unit="sccm">300.0</Param>
+      <Param name="GasFlow_NH3" unit="sccm">80.0</Param>
+      <Param name="DepositionRate" unit="A_per_min">185.0</Param>
+      <Status>COMPLETE</Status>
+    </Step>
+    <Step id="4" name="PostDeposition_Anneal" timestamp="2026-03-05T11:50:05Z" chamber="CHA" duration_s="600">
+      <Param name="Temperature" unit="C">420.0</Param>
+      <Param name="ChamberPressure" unit="Torr">0.8</Param>
+      <Param name="GasFlow_N2" unit="sccm">500.0</Param>
+      <Param name="HeaterPower" unit="W">2350.0</Param>
+      <Status>COMPLETE</Status>
+    </Step>
+    <Step id="5" name="CoolDown" timestamp="2026-03-05T12:00:05Z" chamber="CHA" duration_s="333">
+      <Param name="Temperature" unit="C">120.0</Param>
+      <Param name="ChamberPressure" unit="Torr">1.5</Param>
+      <Param name="GasFlow_N2" unit="sccm">200.0</Param>
+      <Status>COMPLETE</Status>
+    </Step>
+  </Steps>
+
+  <Events>
+    <Event timestamp="2026-03-05T11:20:02Z" severity="INFO"    chamber="CHA" code="PROCESS_START">Process sequence initiated for RCP_CVD_07</Event>
+    <Event timestamp="2026-03-05T11:22:00Z" severity="INFO"    chamber="CHA" code="STATE_CHANGE">Heater ramp-up complete - target temperature reached</Event>
+    <Event timestamp="2026-03-05T11:25:00Z" severity="INFO"    chamber="CHA" code="STATE_CHANGE">Gas stabilisation confirmed - deposition started</Event>
+    <Event timestamp="2026-03-05T11:38:12Z" severity="WARNING" chamber="CHA" code="FLOW_VARIANCE">GasFlow_SiH4 variance detected: measured 113.2 sccm vs setpoint 120.0 sccm (delta=-6.8)</Event>
+    <Event timestamp="2026-03-05T11:42:05Z" severity="WARNING" chamber="CHA" code="TEMP_DRIFT">Temperature drift detected: 403.8 C vs setpoint 400.0 C - within process window but flagged</Event>
+    <Event timestamp="2026-03-05T11:50:00Z" severity="INFO"    chamber="CHA" code="STATE_CHANGE">Deposition endpoint reached - transitioning to anneal</Event>
+    <Event timestamp="2026-03-05T12:00:00Z" severity="INFO"    chamber="CHA" code="STATE_CHANGE">Anneal complete - entering cooldown</Event>
+    <Event timestamp="2026-03-05T12:05:33Z" severity="INFO"    chamber="CHA" code="PROCESS_END">Process complete - status=WARNING due to SiH4 variance at step 3</Event>
+  </Events>
+
+  <SensorTrace chamber="CHA" step="3" parameter="Temperature" unit="C" sample_interval_s="60">
+    <Reading ts="2026-03-05T11:25:05Z" v="399.2"/>
+    <Reading ts="2026-03-05T11:26:05Z" v="399.8"/>
+    <Reading ts="2026-03-05T11:27:05Z" v="400.1"/>
+    <Reading ts="2026-03-05T11:28:05Z" v="400.0"/>
+    <Reading ts="2026-03-05T11:29:05Z" v="400.3"/>
+    <Reading ts="2026-03-05T11:30:05Z" v="400.2"/>
+    <Reading ts="2026-03-05T11:31:05Z" v="400.5"/>
+    <Reading ts="2026-03-05T11:32:05Z" v="400.8"/>
+    <Reading ts="2026-03-05T11:33:05Z" v="401.0"/>
+    <Reading ts="2026-03-05T11:34:05Z" v="401.5"/>
+    <Reading ts="2026-03-05T11:35:05Z" v="401.9"/>
+    <Reading ts="2026-03-05T11:36:05Z" v="402.3"/>
+    <Reading ts="2026-03-05T11:37:05Z" v="402.7"/>
+    <Reading ts="2026-03-05T11:38:05Z" v="403.1"/>
+    <Reading ts="2026-03-05T11:39:05Z" v="403.4"/>
+    <Reading ts="2026-03-05T11:40:05Z" v="403.6"/>
+    <Reading ts="2026-03-05T11:41:05Z" v="403.7"/>
+    <Reading ts="2026-03-05T11:42:05Z" v="403.8"/>
+    <Reading ts="2026-03-05T11:43:05Z" v="403.6"/>
+    <Reading ts="2026-03-05T11:45:05Z" v="403.1"/>
+    <Reading ts="2026-03-05T11:47:05Z" v="402.4"/>
+    <Reading ts="2026-03-05T11:49:05Z" v="401.5"/>
+    <Reading ts="2026-03-05T11:50:05Z" v="401.0"/>
+  </SensorTrace>
+
+  <SensorTrace chamber="CHA" step="3" parameter="RF_Power" unit="W" sample_interval_s="60">
+    <Reading ts="2026-03-05T11:25:05Z" v="348.2"/>
+    <Reading ts="2026-03-05T11:27:05Z" v="350.0"/>
+    <Reading ts="2026-03-05T11:30:05Z" v="349.8"/>
+    <Reading ts="2026-03-05T11:35:05Z" v="350.3"/>
+    <Reading ts="2026-03-05T11:40:05Z" v="350.1"/>
+    <Reading ts="2026-03-05T11:45:05Z" v="349.9"/>
+    <Reading ts="2026-03-05T11:50:05Z" v="350.2"/>
+  </SensorTrace>
+
+  <SensorTrace chamber="CHA" step="3" parameter="GasFlow_SiH4" unit="sccm" sample_interval_s="60">
+    <Reading ts="2026-03-05T11:25:05Z" v="120.1"/>
+    <Reading ts="2026-03-05T11:28:05Z" v="119.9"/>
+    <Reading ts="2026-03-05T11:31:05Z" v="120.0"/>
+    <Reading ts="2026-03-05T11:34:05Z" v="118.5"/>
+    <Reading ts="2026-03-05T11:37:05Z" v="115.2"/>
+    <Reading ts="2026-03-05T11:38:12Z" v="113.2"/>
+    <Reading ts="2026-03-05T11:40:05Z" v="116.8"/>
+    <Reading ts="2026-03-05T11:43:05Z" v="119.5"/>
+    <Reading ts="2026-03-05T11:46:05Z" v="120.0"/>
+    <Reading ts="2026-03-05T11:49:05Z" v="120.1"/>
+  </SensorTrace>
+</ToolLog>

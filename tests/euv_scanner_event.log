@@ -1,0 +1,90 @@
+Machine: EUV_SCANNER_MCH0001
+Lot: LOT_9981
+Wafer: WFR_045
+Recipe: RCP_EUV_LITHO_14
+Operator: OP_7720
+Session Start: 2026-03-05 11:10:00
+
+[11:10:00.141] SYSTEM EVENT: ER-4102 DEFAULT
+Log file 'ER/ER_event_log_MCH0001_20260304_235308' is closed.
+Log file 'ER/ER_event_log_MCH0001_20260305_000000' is created.
+
+[11:10:00.201] Machine:MCH0001 (Rel:VER0001, DWIO [dc], DWDMxOA_rq.c, ?.?, 432)
+SYSTEM WARNING: DW-20E2 DEFAULT
+The scan time is too short to perform an OASIS light measurement. Current scan time: 15.00 [ms], required minimum scan time: 25.00 [ms]
+Time specified: 15.00 ms
+Minimal time required: 25.00 ms
+[DWDMxOA_rq_program_light_trigger:DWFMxOA_LIGHT_TIMING_WARNING]
+
+[11:10:00.241] Machine:MCH0001 (Rel:VER0001, DWIO [dc], DWDMxOA_rq.c, ?.?, 434)
+SYSTEM EVENT: ER-0FFF DEFAULT (linked to DW-20E2)
+DEACTIVATE: DW-20e2
+
+[11:10:02.313] Starting exposure sequence
+Reticle ID: MASK_EUV_L14_REV3
+Dose setpoint: 15.2 mJ/cm2
+Focus setpoint: -0.05 um
+Numerical aperture: 0.33
+
+[11:10:05.000] Stage alignment complete
+X offset: 0.003 um
+Y offset: -0.001 um
+Rotational error: 0.00012 rad
+Alignment status: PASS
+
+[11:10:08.000] Starting exposure - field 1 of 84
+Source power: 98.2 W
+Pulse energy: 2.05 mJ
+Repetition rate: 50 Hz
+
+[11:10:10.000] Exposure field 1 complete
+Actual dose: 15.18 mJ/cm2
+Focus deviation: 0.002 um
+Overlay error X: 0.8 nm
+Overlay error Y: 0.6 nm
+
+[11:10:12.000] Exposure field 2 complete
+Actual dose: 15.21 mJ/cm2
+Focus deviation: -0.001 um
+
+[11:10:14.000] Exposure field 3 complete
+Actual dose: 15.19 mJ/cm2
+Focus deviation: 0.003 um
+
+[11:10:30.000] Alarm triggered
+Code: EUV_LASER_FLUCT
+Description: Laser energy fluctuation detected - pulse energy deviation exceeds 2% threshold
+Measured pulse energy: 2.09 mJ
+Setpoint: 2.05 mJ
+Deviation: +1.95%
+Action: Exposure paused - energy stabilisation in progress
+
+[11:10:35.000] Laser energy stabilised
+Pulse energy: 2.05 mJ
+Resuming exposure from field 22
+
+[11:11:00.000] Exposure field 22 complete
+Actual dose: 15.20 mJ/cm2
+
+[11:11:20.000] Exposure field 42 complete
+Actual dose: 15.22 mJ/cm2
+Focus deviation: 0.001 um
+
+[11:11:45.000] Exposure field 63 complete
+Actual dose: 15.19 mJ/cm2
+
+[11:12:10.000] Exposure field 84 complete - all fields exposed
+Actual dose mean: 15.20 mJ/cm2
+Dose 3-sigma: 0.04 mJ/cm2
+Focus mean deviation: 0.001 um
+Overlay mean error X: 0.9 nm
+Overlay mean error Y: 0.7 nm
+
+[11:12:15.000] Wafer unloading sequence started
+Stage returning to home position
+
+[11:12:30.000] Process completed - status: WARNING
+Total alarms: 1 (EUV_LASER_FLUCT)
+Total warnings: 1 (DW-20E2 scan time)
+Wafer disposition: Qualified - send to metrology for overlay verification
+Session end: 2026-03-05 11:12:30

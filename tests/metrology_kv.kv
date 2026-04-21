@@ -1,0 +1,34 @@
+# Vendor G - Metrology Tool Log v4.1
+# Tool: METRO_TOOL_01 | Generated: 2026-03-05T11:30:00Z
+
+timestamp=2026-03-05T11:30:00Z equipment_id=METRO_TOOL_01 fab_id=FAB_SG_01 lot_id=LOT_20260305_C wafer_id=WFR_099 recipe_id=RCP_METRO_03 event=PROCESS_START operator_id=OP_3301
+
+timestamp=2026-03-05T11:30:05Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=1 step_name=AlignStage temperature_C=23.5 pressure_Torr=1.05 stage_x_um=0.00 stage_y_um=0.00 event=STAGE_INIT
+
+timestamp=2026-03-05T11:30:15Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=1 thickness_nm=52.3 reflectance=0.83 uniformity_pct=98.1 event=MEASUREMENT
+
+timestamp=2026-03-05T11:30:25Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=2 thickness_nm=51.9 reflectance=0.82 uniformity_pct=97.8 event=MEASUREMENT
+
+timestamp=2026-03-05T11:30:35Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=3 thickness_nm=52.8 reflectance=0.84 uniformity_pct=98.5 event=MEASUREMENT
+
+timestamp=2026-03-05T11:30:45Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=4 thickness_nm=50.1 reflectance=0.80 uniformity_pct=95.2 event=MEASUREMENT
+
+timestamp=2026-03-05T11:30:55Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=5 thickness_nm=49.8 reflectance=0.79 uniformity_pct=94.7 event=MEASUREMENT
+
+timestamp=2026-03-05T11:31:00Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=5 severity=WARNING code=THICKNESS_LOW message="Film thickness 49.8nm below lower spec limit 50.0nm" spec_low=50.0 spec_high=55.0 drift_nm=-0.2 event=ALARM
+
+timestamp=2026-03-05T11:31:10Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=6 thickness_nm=52.1 reflectance=0.83 uniformity_pct=97.9 event=MEASUREMENT
+
+timestamp=2026-03-05T11:31:20Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=7 thickness_nm=52.4 reflectance=0.83 uniformity_pct=98.2 event=MEASUREMENT
+
+timestamp=2026-03-05T11:31:30Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=8 thickness_nm=53.0 reflectance=0.85 uniformity_pct=98.7 event=MEASUREMENT
+
+timestamp=2026-03-05T11:31:40Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=2 step_name=MeasureFilm site=9 thickness_nm=52.7 reflectance=0.84 uniformity_pct=98.3 event=MEASUREMENT
+
+timestamp=2026-03-05T11:31:50Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=3 step_name=ComputeStats mean_thickness_nm=52.01 std_thickness_nm=0.98 min_thickness_nm=49.8 max_thickness_nm=53.0 within_spec_sites=8 out_of_spec_sites=1 event=STATS_COMPUTED
+
+timestamp=2026-03-05T11:32:00Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=3 step_name=ComputeStats severity=WARNING code=UNIFORMITY_FLAG message="1 of 9 sites outside spec - review recommended" pass_rate_pct=88.9 event=ALARM
+
+timestamp=2026-03-05T11:32:10Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=4 step_name=AlignStage drift_um=1.8 alignment_error_nm=0.4 correction_applied=true event=STAGE_CORRECTION
+
+timestamp=2026-03-05T11:32:20Z equipment_id=METRO_TOOL_01 module_id=MOD_M1 step=5 step_name=Complete event=PROCESS_END status=WARNING duration_s=140 total_sites=9 pass_sites=8

@@ -1,0 +1,29 @@
+Mar 05 11:00:00 ETCH_TOOL_03 PROCESS_START Recipe=RCP_OXIDE_05 Lot=LOT_234 Wafer=WFR_088 Operator=OP_9901
+Mar 05 11:00:05 ETCH_TOOL_03 SENSOR temperature=110C pressure=0.9Torr module=MOD_A step=1
+Mar 05 11:00:08 ETCH_TOOL_03 SENSOR rf_power=480W bias_voltage=95V
+Mar 05 11:00:10 ETCH_TOOL_03 SENSOR gas_flow_cf4=55sccm gas_flow_o2=8sccm
+Mar 05 11:00:12 ETCH_TOOL_03 EVENT step=etch_start step_id=1 step_name=MainEtch
+Mar 05 11:01:00 ETCH_TOOL_03 SENSOR temperature=112C pressure=0.91Torr rf_power=480W
+Mar 05 11:02:00 ETCH_TOOL_03 SENSOR temperature=113C pressure=0.92Torr rf_power=479W
+Mar 05 11:03:00 ETCH_TOOL_03 SENSOR temperature=114C pressure=0.93Torr rf_power=481W
+Mar 05 11:04:00 ETCH_TOOL_03 SENSOR temperature=115C pressure=0.94Torr rf_power=480W
+Mar 05 11:04:30 ETCH_TOOL_03 WARNING vacuum_instability level=medium pressure=0.98Torr threshold=0.95Torr
+Mar 05 11:04:45 ETCH_TOOL_03 WARNING vacuum_instability level=high pressure=1.02Torr threshold=0.95Torr
+<134>1 2026-03-05T11:05:00.000Z ETCH_TOOL_03 fab_controller 2210 ALARM_EVT [alarm code="VACUUM_FAULT" severity="alarm" module="MOD_A"] Vacuum pressure exceeded critical threshold: 1.05 Torr
+<134>1 2026-03-05T11:05:02.000Z ETCH_TOOL_03 fab_controller 2211 INTERLOCK [interlock type="RF_SHUTOFF" trigger="VACUUM_FAULT"] RF power interlock activated - plasma terminated
+<134>1 2026-03-05T11:05:05.000Z ETCH_TOOL_03 fab_controller 2212 STATE_CHANGE [state="FAULT_RECOVERY"] Recipe paused - initiating fault recovery sequence
+Mar 05 11:05:30 ETCH_TOOL_03 SENSOR pressure=0.91Torr temperature=112C rf_power=0W
+Mar 05 11:05:45 ETCH_TOOL_03 SENSOR pressure=0.90Torr
+Mar 05 11:06:00 ETCH_TOOL_03 EVENT fault_recovery=complete pressure_stable=true
+<134>1 2026-03-05T11:06:05.000Z ETCH_TOOL_03 fab_controller 2213 STATE_CHANGE [state="RECIPE_RESUME"] Fault cleared - resuming recipe from step 1 checkpoint
+Mar 05 11:06:10 ETCH_TOOL_03 SENSOR temperature=110C pressure=0.90Torr rf_power=480W
+Mar 05 11:07:00 ETCH_TOOL_03 SENSOR temperature=111C pressure=0.91Torr rf_power=480W
+Mar 05 11:08:00 ETCH_TOOL_03 SENSOR temperature=112C pressure=0.91Torr rf_power=481W
+Mar 05 11:09:00 ETCH_TOOL_03 SENSOR temperature=112C pressure=0.90Torr epd_signal=0.75V
+Mar 05 11:10:00 ETCH_TOOL_03 SENSOR temperature=111C pressure=0.90Torr epd_signal=0.60V
+Mar 05 11:11:00 ETCH_TOOL_03 SENSOR epd_signal=0.42V
+Mar 05 11:11:30 ETCH_TOOL_03 EVENT step=endpoint_detected step_id=1 epd_threshold=0.40V
+Mar 05 11:11:35 ETCH_TOOL_03 EVENT step=overetch_start duration_s=90
+Mar 05 11:13:05 ETCH_TOOL_03 EVENT step=overetch_end status=complete
+<134>1 2026-03-05T11:13:10.000Z ETCH_TOOL_03 fab_controller 2250 PROCESS_END [result="WARNING" alarm_count="2" warning_count="1"] Process complete with warnings - wafer qualified for metrology
+Mar 05 11:13:15 ETCH_TOOL_03 PROCESS_END status=success_with_warnings lot=LOT_234 wafer=WFR_088 duration_s=795

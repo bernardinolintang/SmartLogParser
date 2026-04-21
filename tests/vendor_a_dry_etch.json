@@ -1,0 +1,222 @@
+{
+  "ControlJob": {
+    "ControlJobID": "CJ0B_0042",
+    "EquipmentID": "DRY_ETCH_TOOL_07",
+    "FabID": "FAB_SG_01",
+    "OperatorID": "OP_7731",
+    "ProcessJobs": [
+      {
+        "ProcessJobID": "PRJOB_0001",
+        "LotID": "LOT_20260305_A",
+        "WaferID": "WFR_001",
+        "SlotID": "SLOT_0001",
+        "RecipeID": "RCP_POLYETCH_02",
+        "RecipeStepStart": "2026-03-05T11:00:00.000000Z",
+        "RecipeStepEnd": "2026-03-05T11:42:17.000000Z",
+        "ProcessResult": "SUCCESS",
+        "ModuleProcessReports": [
+          {
+            "Keys": { "ModuleID": "MOD_0001", "WaferID": "WFR_001", "RecipeStepID": "RQ", "RecipeStepName": "Prerequisites" },
+            "Attributes": {
+              "Events": {
+                "ControlStateEvents": [
+                  { "EventID": 229, "Text": "Recipe prerequisites started", "DateTime": "2026-03-05T11:00:00.547Z" },
+                  { "EventID": 230, "Text": "Chamber pressure stabilising", "DateTime": "2026-03-05T11:00:05.100Z" }
+                ],
+                "Alarms": [], "Errors": []
+              }
+            },
+            "SensorData": [
+              {
+                "SensorID": "SENSOR_0001", "SensorName": "ChamberPressure", "Unit": "mTorr",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:00:00.547Z", "Value": 1.20 },
+                  { "DateTime": "2026-03-05T11:00:01.547Z", "Value": 1.18 },
+                  { "DateTime": "2026-03-05T11:00:02.547Z", "Value": 1.22 },
+                  { "DateTime": "2026-03-05T11:00:03.547Z", "Value": 1.19 },
+                  { "DateTime": "2026-03-05T11:00:04.547Z", "Value": 1.21 }
+                ]
+              },
+              {
+                "SensorID": "SENSOR_0002", "SensorName": "Temperature", "Unit": "C",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:00:00.547Z", "Value": 25.1 },
+                  { "DateTime": "2026-03-05T11:00:01.547Z", "Value": 25.3 },
+                  { "DateTime": "2026-03-05T11:00:02.547Z", "Value": 25.0 },
+                  { "DateTime": "2026-03-05T11:00:03.547Z", "Value": 25.2 },
+                  { "DateTime": "2026-03-05T11:00:04.547Z", "Value": 25.4 }
+                ]
+              }
+            ]
+          },
+          {
+            "Keys": { "ModuleID": "MOD_0001", "WaferID": "WFR_001", "RecipeStepID": "1", "RecipeStepName": "Gas_Stabilisation" },
+            "Attributes": {
+              "Events": {
+                "ControlStateEvents": [
+                  { "EventID": 301, "Text": "Gas flow stabilisation initiated", "DateTime": "2026-03-05T11:00:30.000Z" }
+                ],
+                "Alarms": [], "Errors": []
+              }
+            },
+            "SensorData": [
+              {
+                "SensorID": "SENSOR_0003", "SensorName": "GasFlow_CF4", "Unit": "sccm",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:00:30.000Z", "Value": 40.0 },
+                  { "DateTime": "2026-03-05T11:00:31.000Z", "Value": 43.5 },
+                  { "DateTime": "2026-03-05T11:00:32.000Z", "Value": 45.0 },
+                  { "DateTime": "2026-03-05T11:00:33.000Z", "Value": 45.1 },
+                  { "DateTime": "2026-03-05T11:00:34.000Z", "Value": 45.0 },
+                  { "DateTime": "2026-03-05T11:00:35.000Z", "Value": 44.9 }
+                ]
+              },
+              {
+                "SensorID": "SENSOR_0004", "SensorName": "GasFlow_O2", "Unit": "sccm",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:00:30.000Z", "Value": 8.0 },
+                  { "DateTime": "2026-03-05T11:00:31.000Z", "Value": 9.5 },
+                  { "DateTime": "2026-03-05T11:00:32.000Z", "Value": 10.0 },
+                  { "DateTime": "2026-03-05T11:00:33.000Z", "Value": 10.1 },
+                  { "DateTime": "2026-03-05T11:00:34.000Z", "Value": 10.0 },
+                  { "DateTime": "2026-03-05T11:00:35.000Z", "Value": 9.9 }
+                ]
+              },
+              {
+                "SensorID": "SENSOR_0005", "SensorName": "ChamberPressure", "Unit": "mTorr",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:00:30.000Z", "Value": 45.0 },
+                  { "DateTime": "2026-03-05T11:00:31.000Z", "Value": 46.2 },
+                  { "DateTime": "2026-03-05T11:00:32.000Z", "Value": 47.5 },
+                  { "DateTime": "2026-03-05T11:00:33.000Z", "Value": 47.8 },
+                  { "DateTime": "2026-03-05T11:00:34.000Z", "Value": 47.6 }
+                ]
+              }
+            ]
+          },
+          {
+            "Keys": { "ModuleID": "MOD_0001", "WaferID": "WFR_001", "RecipeStepID": "2", "RecipeStepName": "Etch_Main" },
+            "Attributes": {
+              "Events": {
+                "ControlStateEvents": [
+                  { "EventID": 401, "Text": "Main etch step initiated", "DateTime": "2026-03-05T11:01:00.000Z" },
+                  { "EventID": 402, "Text": "Plasma ignition confirmed", "DateTime": "2026-03-05T11:01:02.500Z" }
+                ],
+                "Alarms": [
+                  { "AlarmID": "ALM_0021", "Code": "PRESSURE_HIGH", "Severity": "WARNING", "Text": "Chamber pressure exceeded upper control limit", "DateTime": "2026-03-05T11:08:42.000Z", "MeasuredValue": 52.3, "Unit": "mTorr", "ControlLimit": 50.0 }
+                ],
+                "Errors": []
+              }
+            },
+            "SensorData": [
+              {
+                "SensorID": "SENSOR_0006", "SensorName": "RF_Power", "Unit": "W",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:01:00.000Z", "Value": 490.0 },
+                  { "DateTime": "2026-03-05T11:02:00.000Z", "Value": 500.1 },
+                  { "DateTime": "2026-03-05T11:03:00.000Z", "Value": 499.9 },
+                  { "DateTime": "2026-03-05T11:04:00.000Z", "Value": 500.3 },
+                  { "DateTime": "2026-03-05T11:05:00.000Z", "Value": 500.0 },
+                  { "DateTime": "2026-03-05T11:06:00.000Z", "Value": 498.7 },
+                  { "DateTime": "2026-03-05T11:07:00.000Z", "Value": 499.5 },
+                  { "DateTime": "2026-03-05T11:08:00.000Z", "Value": 500.2 },
+                  { "DateTime": "2026-03-05T11:08:42.000Z", "Value": 500.0 }
+                ]
+              },
+              {
+                "SensorID": "SENSOR_0007", "SensorName": "BiasVoltage", "Unit": "V",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:01:00.000Z", "Value": 120.0 },
+                  { "DateTime": "2026-03-05T11:02:00.000Z", "Value": 120.5 },
+                  { "DateTime": "2026-03-05T11:03:00.000Z", "Value": 119.8 },
+                  { "DateTime": "2026-03-05T11:05:00.000Z", "Value": 120.1 },
+                  { "DateTime": "2026-03-05T11:07:00.000Z", "Value": 119.9 },
+                  { "DateTime": "2026-03-05T11:08:42.000Z", "Value": 120.3 }
+                ]
+              },
+              {
+                "SensorID": "SENSOR_0008", "SensorName": "ChamberPressure", "Unit": "mTorr",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:01:00.000Z", "Value": 47.5 },
+                  { "DateTime": "2026-03-05T11:03:00.000Z", "Value": 48.0 },
+                  { "DateTime": "2026-03-05T11:05:00.000Z", "Value": 48.5 },
+                  { "DateTime": "2026-03-05T11:06:00.000Z", "Value": 49.0 },
+                  { "DateTime": "2026-03-05T11:07:00.000Z", "Value": 49.8 },
+                  { "DateTime": "2026-03-05T11:08:00.000Z", "Value": 51.0 },
+                  { "DateTime": "2026-03-05T11:08:42.000Z", "Value": 52.3 }
+                ]
+              },
+              {
+                "SensorID": "SENSOR_0009", "SensorName": "EPD_Signal", "Unit": "V",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:01:00.000Z", "Value": 0.82 },
+                  { "DateTime": "2026-03-05T11:02:00.000Z", "Value": 0.80 },
+                  { "DateTime": "2026-03-05T11:04:00.000Z", "Value": 0.75 },
+                  { "DateTime": "2026-03-05T11:06:00.000Z", "Value": 0.65 },
+                  { "DateTime": "2026-03-05T11:07:00.000Z", "Value": 0.55 },
+                  { "DateTime": "2026-03-05T11:08:00.000Z", "Value": 0.42 }
+                ]
+              }
+            ]
+          },
+          {
+            "Keys": { "ModuleID": "MOD_0001", "WaferID": "WFR_001", "RecipeStepID": "3", "RecipeStepName": "Overetch" },
+            "Attributes": {
+              "Events": {
+                "ControlStateEvents": [
+                  { "EventID": 501, "Text": "Endpoint detected - transitioning to overetch", "DateTime": "2026-03-05T11:08:55.000Z" },
+                  { "EventID": 502, "Text": "Overetch step complete", "DateTime": "2026-03-05T11:10:25.000Z" }
+                ],
+                "Alarms": [], "Errors": []
+              }
+            },
+            "SensorData": [
+              {
+                "SensorID": "SENSOR_0010", "SensorName": "RF_Power", "Unit": "W",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:08:55.000Z", "Value": 350.0 },
+                  { "DateTime": "2026-03-05T11:09:15.000Z", "Value": 350.2 },
+                  { "DateTime": "2026-03-05T11:09:55.000Z", "Value": 350.1 },
+                  { "DateTime": "2026-03-05T11:10:15.000Z", "Value": 350.0 }
+                ]
+              },
+              {
+                "SensorID": "SENSOR_0011", "SensorName": "GasFlow_He", "Unit": "sccm",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:08:55.000Z", "Value": 15.0 },
+                  { "DateTime": "2026-03-05T11:09:25.000Z", "Value": 14.8 },
+                  { "DateTime": "2026-03-05T11:10:25.000Z", "Value": 15.0 }
+                ]
+              }
+            ]
+          },
+          {
+            "Keys": { "ModuleID": "MOD_0001", "WaferID": "WFR_001", "RecipeStepID": "4", "RecipeStepName": "Chamber_Purge" },
+            "Attributes": {
+              "Events": {
+                "ControlStateEvents": [
+                  { "EventID": 601, "Text": "Chamber purge initiated", "DateTime": "2026-03-05T11:10:30.000Z" },
+                  { "EventID": 602, "Text": "Chamber purge complete - process success", "DateTime": "2026-03-05T11:12:00.000Z" }
+                ],
+                "Alarms": [], "Errors": []
+              }
+            },
+            "SensorData": [
+              {
+                "SensorID": "SENSOR_0012", "SensorName": "ChamberPressure", "Unit": "mTorr",
+                "Measurements": [
+                  { "DateTime": "2026-03-05T11:10:30.000Z", "Value": 47.0 },
+                  { "DateTime": "2026-03-05T11:10:50.000Z", "Value": 20.5 },
+                  { "DateTime": "2026-03-05T11:11:10.000Z", "Value": 8.2 },
+                  { "DateTime": "2026-03-05T11:11:30.000Z", "Value": 2.1 },
+                  { "DateTime": "2026-03-05T11:11:50.000Z", "Value": 0.8 },
+                  { "DateTime": "2026-03-05T11:12:00.000Z", "Value": 0.5 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
