@@ -8,9 +8,51 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "lint": "npm --prefix frontend run lint",
-    "test": "npm --prefix frontend run test"
+    "test": "npm --prefix frontend run test",
+    "test:e2e": "node_modules\\.bin\\playwright test",
+    "test:e2e:ui": "node_modules\\.bin\\playwright test --ui",
+    "test:e2e:report": "node_modules\\.bin\\playwright show-report"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "concurrently": "^9.2.1"
-  }
+  },
+  "description": "A full-stack observability platform that transforms heterogeneous semiconductor equipment logs into structured machine events for analytics, process monitoring, and engineering investigation.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "dependencies": {
+    "ansi-styles": "^4.3.0",
+    "chalk": "^4.1.2",
+    "cliui": "^8.0.1",
+    "color-convert": "^2.0.1",
+    "color-name": "^1.1.4",
+    "escalade": "^3.2.0",
+    "get-caller-file": "^2.0.5",
+    "has-flag": "^4.0.0",
+    "is-fullwidth-code-point": "^3.0.0",
+    "require-directory": "^2.1.1",
+    "rxjs": "^7.8.2",
+    "shell-quote": "^1.8.3",
+    "supports-color": "^7.2.0",
+    "tree-kill": "^1.2.2",
+    "tslib": "^2.8.0",
+    "y18n": "^5.0.8",
+    "yargs": "^17.7.2",
+    "yargs-parser": "^21.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bernardinolintang/SmartLogParser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bernardinolintang/SmartLogParser/issues"
+  },
+  "homepage": "https://github.com/bernardinolintang/SmartLogParser#readme"
 }
