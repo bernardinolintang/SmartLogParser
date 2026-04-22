@@ -28,6 +28,7 @@ from app.parsers import (
     parse_text,
     parse_hex,
     parse_binary,
+    parse_parquet,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ _PARSER_MAP = {
     "text": parse_text,
     "hex": parse_hex,
     "binary": parse_binary,
+    "parquet": parse_parquet,
 }
 
 
@@ -48,7 +50,7 @@ def parse_file(content: str, filename: str, db: Session, raw_bytes: bytes | None
     """Full parse pipeline: detect -> parse -> normalize -> validate -> LLM -> store."""
     run_id = f"RUN_{uuid.uuid4().hex[:12].upper()}"
 
-    fmt, confidence, ambiguous = detect_format_with_confidence(content, raw_bytes)
+    fmt, confidence, ambiguous = detect_format_with_confidence(content, raw_bytes, filename)
     logger.info(
         "Detected format: %s (confidence=%.2f, ambiguous=%s) for %s",
         fmt, confidence, ambiguous, filename,
@@ -252,6 +254,6 @@ def _event_type_to_frontend(et: str) -> str:
 
 
 def _invoke_parser(parser_fn, content: str, run_id: str, raw_bytes: bytes | None) -> list[dict]:
-    if parser_fn is parse_binary:
+    if parser_fn is parse_binary or parser_fn is parse_parquet:
         return parser_fn(content, run_id, raw_bytes)
     return parser_fn(content, run_id)

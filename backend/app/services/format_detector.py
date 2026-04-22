@@ -1,13 +1,15 @@
 """Detects the format of uploaded log content using deterministic rules.
 
-Returns one of: json, xml, csv, kv, syslog, text, hex, binary
+Returns one of: json, xml, csv, kv, syslog, text, hex, binary, parquet
 """
 from __future__ import annotations
 
 import json
 import re
 
-LogFormat = str  # one of: json, xml, csv, kv, syslog, text, hex, binary
+LogFormat = str  # one of: json, xml, csv, kv, syslog, text, hex, binary, parquet
+
+_PARQUET_MAGIC = b"PAR1"
 
 _CSV_SCORE_HEADERS = {"timestamp", "tool_id", "equipment_id", "parameter", "value"}
 _RFC5424 = re.compile(r"^\<\d+\>\d+\s+\d{4}-\d{2}-\d{2}T")
@@ -26,18 +28,30 @@ def looks_binary_bytes(raw_bytes: bytes) -> bool:
     return nul_ratio > 0.02 or non_printable_ratio > 0.30
 
 
-def detect_format(content: str) -> LogFormat:
-    fmt, _, _ = detect_format_with_confidence(content)
+def is_parquet_bytes(raw_bytes: bytes | None, filename: str = "") -> bool:
+    """Return True if raw_bytes or filename indicate a Parquet file."""
+    if filename.lower().endswith(".parquet"):
+        return True
+    if raw_bytes and len(raw_bytes) >= 4 and raw_bytes[:4] == _PARQUET_MAGIC:
+        return True
+    return False
+
+
+def detect_format(content: str, filename: str = "") -> LogFormat:
+    fmt, _, _ = detect_format_with_confidence(content, filename=filename)
     return fmt
 
 
 def detect_format_with_confidence(
-    content: str, raw_bytes: bytes | None = None
+    content: str, raw_bytes: bytes | None = None, filename: str = ""
 ) -> tuple[LogFormat, float, bool]:
     """Return (format, confidence, ambiguous).
 
     ambiguous is True when the top two candidate scores are within 0.15 of each other.
     """
+    if is_parquet_bytes(raw_bytes, filename):
+        return "parquet", 0.97, False
+
     if raw_bytes is not None and looks_binary_bytes(raw_bytes):
         return "binary", 0.95, False
 

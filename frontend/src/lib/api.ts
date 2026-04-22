@@ -32,6 +32,29 @@ export interface GoldenCompareResponse {
   drift_count: number;
 }
 
+export interface AnomalyResult {
+  parameter: string;
+  timestamp: string;
+  value: number;
+  z_score: number;
+  type: 'z_score' | 'rolling_drift';
+  severity: 'alarm' | 'warning';
+  description: string;
+  mean: number;
+  std: number;
+  event_index?: number;
+}
+
+export interface AnomalyResponse {
+  run_id: string;
+  anomaly_count: number;
+  z_score_anomalies: number;
+  drift_anomalies: number;
+  parameters_with_anomalies: string[];
+  total_readings_analysed: number;
+  anomalies: AnomalyResult[];
+}
+
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
   const res = await fetch(input, init);
   if (!res.ok) {
@@ -77,6 +100,10 @@ export async function fetchTimeseries(runId: string, parameter?: string): Promis
 
 export async function markGoldenRun(runId: string): Promise<RunSummaryResponse> {
   return fetchJson<RunSummaryResponse>(`${API_BASE}/api/runs/${runId}/mark-golden`, { method: 'POST' });
+}
+
+export async function fetchRunAnomalies(runId: string): Promise<AnomalyResponse> {
+  return fetchJson<AnomalyResponse>(`${API_BASE}/api/runs/${runId}/anomalies`);
 }
 
 export async function compareGoldenRuns(baselineId: string, currentId: string): Promise<GoldenCompareResponse> {

@@ -73,4 +73,9 @@ async def parse_log_full(file: UploadFile = File(...), db: Session = Depends(get
         "rawContent": result["rawContent"],
         "summary": result["summary"],
         "rawPreview": result["rawPreview"],
+        "total_events": result["total_events"],
+        "alarm_count": result["alarm_count"],
+        "warning_count": result["warning_count"],
+        "duplicates_dropped": result["duplicates_dropped"],
+        "failed_event_count": result["failed_events"],
     }

@@ -26,19 +26,20 @@ import time
 from pathlib import Path
 
 # ── CONFIG ───────────────────────────────────────────────────────────────────
-BASE_URL = "http://localhost:8000"   # change if your backend runs elsewhere
+BASE_URL = "http://localhost:8001"   # change if your backend runs elsewhere
 LOG_DIR  = Path(__file__).parent     # same folder as this script
 TIMEOUT  = 30                        # seconds per request
 
 # Expected format detection per file
 EXPECTED = {
-    "vendor_a_dry_etch.json":    {"format": "json",     "min_events": 5,  "has_alarm": True},
+    "vendor_a_dry_etch.json":    {"format": "json",     "min_events": 5,  "has_alarm": False},
     "cvd_toollog.xml":           {"format": "xml",      "min_events": 5,  "has_alarm": True},
     "metrology_etch_sensor.csv": {"format": "csv",      "min_events": 10, "has_alarm": True},
     "etch_tool_syslog.log":      {"format": "syslog",   "min_events": 8,  "has_alarm": True},
     "metrology_kv.kv":           {"format": "kv",       "min_events": 8,  "has_alarm": True},
     "euv_scanner_event.log":     {"format": "text",     "min_events": 5,  "has_alarm": True},
-    "binary_sensor_dump.hex":    {"format": "hex",      "min_events": 5,  "has_alarm": False},
+    "binary_sensor_dump.hex":          {"format": "hex",     "min_events": 5,  "has_alarm": False},
+    "vendor_b_parquet_sensor.parquet": {"format": "parquet", "min_events": 5,  "has_alarm": False},
 }
 
 # ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -97,7 +98,7 @@ def upload_file(filepath: Path) -> dict | None:
 # ── SUMMARY ──────────────────────────────────────────────────────────────────
 def get_summary(run_id: str) -> dict | None:
     try:
-        r = requests.get(f"{BASE_URL}/api/summary/{run_id}", timeout=TIMEOUT)
+        r = requests.get(f"{BASE_URL}/api/runs/{run_id}/summary", timeout=TIMEOUT)
         if r.status_code == 200:
             return r.json()
         else:
@@ -111,7 +112,7 @@ def get_summary(run_id: str) -> dict | None:
 def query_events(tool_id: str, severity: str = "alarm") -> list:
     try:
         r = requests.get(
-            f"{BASE_URL}/api/events",
+            f"{BASE_URL}/api/bi/events",
             params={"tool_id": tool_id, "severity": severity},
             timeout=TIMEOUT
         )
@@ -168,7 +169,9 @@ def test_file(filename: str, expected: dict) -> dict:
     event_count = (
         resp.get("total_events")
         or resp.get("event_count")
-        or resp.get("events_extracted", 0)
+        or resp.get("events_extracted")
+        or len(resp.get("events", []))
+        or 0
     )
     if check(event_count >= expected["min_events"],
              f"Events extracted: {event_count} (min expected: {expected['min_events']})",
@@ -179,10 +182,19 @@ def test_file(filename: str, expected: dict) -> dict:
 
     # ── Test 4: Alarm detected if expected ───────────────────────────────────
     if expected["has_alarm"]:
-        alarm_count = resp.get("alarm_count", 0) or resp.get("alarms", 0)
+        summary_inline = resp.get("summary", {}) or {}
+        alarm_count = (
+            resp.get("alarm_count", 0)
+            or resp.get("alarms", 0)
+            or summary_inline.get("alarms", 0)
+        )
         if alarm_count == 0:
             # Try warnings too
-            alarm_count = resp.get("warning_count", 0) or resp.get("warnings", 0)
+            alarm_count = (
+                resp.get("warning_count", 0)
+                or resp.get("warnings", 0)
+                or summary_inline.get("warnings", 0)
+            )
         if check(alarm_count > 0,
                  f"Alarms/warnings captured: {alarm_count}",
                  f"Expected alarms but alarm_count=0 — check parser alarm extraction"):

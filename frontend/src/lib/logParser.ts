@@ -25,6 +25,7 @@ export interface ParsedEvent {
 }
 
 export interface ParseResult {
+  run_id?: string;
   format: LogFormat;
   events: ParsedEvent[];
   rawContent: string;
@@ -42,6 +43,12 @@ export interface ParseResult {
     runIds: string[];
   };
   rawPreview: string;
+  // Fields populated by the backend (not present in client-side fallback)
+  total_events?: number;
+  alarm_count?: number;
+  warning_count?: number;
+  duplicates_dropped?: number;
+  failed_event_count?: number;
 }
 
 // Normalize parameter names across vendors

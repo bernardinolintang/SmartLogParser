@@ -19,6 +19,7 @@ from app.services.summary import compute_summary
 from app.services.llm_service import parse_lines_with_llm
 from app.services.normalization import normalize_events
 from app.services.validation import validate_events
+from app.services.anomaly_service import detect_anomalies_for_run
 
 router = APIRouter(prefix="/api", tags=["runs"])
 
@@ -111,6 +112,15 @@ def get_summary(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     return compute_summary(db, run_id)
+
+
+@router.get("/runs/{run_id}/anomalies")
+def get_anomalies(run_id: str, db: Session = Depends(get_db)):
+    """Detect Z-score and rolling-drift anomalies for all sensor readings in a run."""
+    run = db.query(Run).filter(Run.run_id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return detect_anomalies_for_run(run_id, db)
 
 
 @router.get("/runs/{run_id}/timeseries")

@@ -232,7 +232,7 @@ const Index = () => {
 
             {activeTab === 'anomaly' && result && (
               <motion.div key="anomaly" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <AnomalyDetection events={filteredEvents} />
+                <AnomalyDetection runId={result?.run_id ?? null} />
               </motion.div>
             )}
 

@@ -79,19 +79,21 @@ Semiconductor tools (plasma etch, CVD/PVD, lithography, metrology) produce high-
 
 ## Core Capabilities
 
-- **Multi-format ingestion:** JSON, XML, CSV, key-value, syslog, text, hex, binary
+- **Multi-format ingestion:** JSON, XML, CSV, key-value, syslog, text, hex, binary, **Parquet** — 9 formats, 1 unified schema, 0 events silently discarded
+- **Multi-vendor schema adapters** — Vendor A (SEMI/GEM ControlJob nesting), Vendor B (Parquet/data-lake), generic flat/step schemas. Adding a vendor is a schema adapter, not a core change.
 - **Confidence-scored format detection** with ambiguity flag — runs marked `needs_review` when uncertain
 - **Deterministic parsing** for structured formats, LLM fallback for partial/ambiguous lines
 - **Dual LLM support:** Ollama (local, Docker) or Groq (cloud) — auto-selected
 - **Physical limits validation** — readings outside known physical ranges flagged automatically
+- **Statistical anomaly detection** — Z-score (|z| > 2.5) and rolling-mean drift detection (window=10) per parameter, accessible via `GET /api/runs/{run_id}/anomalies`
 - **Parser version tracking** — every event stamped with the parser version that created it
-- **Dead letter queue** — fully failed events stored separately, retryable up to 3 times
+- **Dead letter queue** — fully failed events stored separately with `failed_event_count` reported on every parse
 - **Vendor normalization** (`TEMP_C` → `temperature`, etc.)
 - **Deduplication** within runs
 - **Golden-run baseline** and drift detection
 - **Streaming ingestion** simulation
 - **Industrial bridge** — pull from Elasticsearch, push to Splunk HEC
-- **BI connectors** — Grafana (PostgreSQL), Tableau & Power BI (OData live feed), Kibana (Elasticsearch)
+- **BI connectors** — Grafana (PostgreSQL direct or `/api/bi/*`), Tableau & Power BI (OData v4 live feed at `/odata/`), Kibana (Elasticsearch)
 - **OData v4 endpoint** — live feed at `/odata/` for any OData-compatible BI tool
 
 ---
@@ -102,7 +104,7 @@ Semiconductor tools (plasma etch, CVD/PVD, lithography, metrology) produce high-
 SmartLogParser/
   backend/
     app/
-      parsers/           Format-specific parsers (json, xml, csv, kv, syslog, text, hex, binary)
+      parsers/           Format-specific parsers (json, xml, csv, kv, syslog, text, hex, binary, parquet)
       services/          Pipeline orchestration, LLM, normalization, validation, Elastic, Splunk
       routes/            API endpoints
       utils/             Field mappings, physical limits
@@ -176,6 +178,7 @@ Every parser emits the same contract:
 | GET | `/api/runs/{run_id}/events` | Events with filters |
 | GET | `/api/runs/{run_id}/alarms` | Alarm-severity events |
 | GET | `/api/runs/{run_id}/summary` | Summary metrics |
+| GET | `/api/runs/{run_id}/anomalies` | Z-score & rolling-drift anomalies for the run |
 | GET | `/api/runs/{run_id}/timeseries` | Parameter readings over time |
 | GET | `/api/runs/{run_id}/timeline` | All events in order |
 | GET | `/api/runs/{run_id}/health` | Health score |
