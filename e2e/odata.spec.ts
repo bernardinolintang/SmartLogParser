@@ -6,7 +6,8 @@ test('GET /odata/ returns OData service document', async ({ request }) => {
   const res = await request.get(`${API}/odata/`);
   expect(res.status()).toBe(200);
   const body = await res.json();
-  expect(body).toHaveProperty('@odata.context');
+  // toHaveProperty path with '@' is buggy in some Jest-compat versions; use direct access
+  expect(body['@odata.context']).toBeDefined();
 });
 
 test('GET /odata/$metadata returns XML', async ({ request }) => {

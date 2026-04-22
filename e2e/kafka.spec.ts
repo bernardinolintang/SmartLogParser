@@ -11,13 +11,14 @@ test('GET /api/kafka/status returns structured response (connected or unavailabl
 });
 
 test('POST /api/kafka/consume with dummy broker returns structured error, not a crash', async ({ request }) => {
-  // ConsumeRequest is a Pydantic BaseModel — must send JSON body, not form data
+  // Use explicit JSON.stringify + Content-Type to guarantee FastAPI parses the Pydantic body
   const res = await request.post(`${API}/api/kafka/consume`, {
-    json: {
+    headers: { 'Content-Type': 'application/json' },
+    data: JSON.stringify({
       topic: 'raw-fab-logs',
       bootstrap_servers: 'localhost:19092',
       max_messages: 5,
-    },
+    }),
   });
   // Must not be 500 — graceful degradation
   expect(res.status()).not.toBe(500);
