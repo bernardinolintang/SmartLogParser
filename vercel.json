@@ -9,5 +9,10 @@
       "routePrefix": "/_/backend",
       "framework": "fastapi"
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/_/backend/api/:path*" },
+    { "source": "/odata/:path*", "destination": "/_/backend/odata/:path*" },
+    { "source": "/health", "destination": "/_/backend/health" }
+  ]
 }

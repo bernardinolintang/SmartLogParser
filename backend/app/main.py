@@ -11,15 +11,17 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routes import upload, runs, dashboards, stream, synthetic, bi, ingestion, odata
+from app.routes import upload, runs, dashboards, stream, synthetic, bi, ingestion, odata, kafka
 from app.routes.odata import METADATA_XML
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 _ALLOWED_ORIGINS = [
+    "http://localhost:8080",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
+    "http://127.0.0.1:8080",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
     "http://127.0.0.1:3000",
@@ -83,6 +85,7 @@ app.include_router(synthetic.router)
 app.include_router(bi.router)
 app.include_router(ingestion.router)
 app.include_router(odata.router)
+app.include_router(kafka.router)
 
 
 @app.get("/")
