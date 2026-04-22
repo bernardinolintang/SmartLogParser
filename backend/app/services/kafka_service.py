@@ -16,7 +16,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_CONNECT_TIMEOUT_MS = 5_000
+_CONNECT_TIMEOUT_MS = 2_000
 
 
 def _make_consumer(topic: str, bootstrap_servers: str):
@@ -30,6 +30,8 @@ def _make_consumer(topic: str, bootstrap_servers: str):
         consumer_timeout_ms=3_000,
         value_deserializer=lambda m: m.decode("utf-8", errors="replace"),
         request_timeout_ms=_CONNECT_TIMEOUT_MS,
+        socket_timeout_ms=_CONNECT_TIMEOUT_MS,
+        connections_max_idle_ms=_CONNECT_TIMEOUT_MS + 1_000,
     )
 
 
@@ -40,6 +42,7 @@ def _make_producer(bootstrap_servers: str):
         bootstrap_servers=bootstrap_servers,
         value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         request_timeout_ms=_CONNECT_TIMEOUT_MS,
+        socket_timeout_ms=_CONNECT_TIMEOUT_MS,
     )
 
 
@@ -155,19 +158,22 @@ def produce_events(
 
 
 def check_broker(bootstrap_servers: str) -> dict:
-    """Test broker reachability without consuming any messages."""
+    """Test broker reachability using a plain socket probe (fast, no kafka-python threads)."""
+    import socket
+
     try:
-        from kafka import KafkaAdminClient  # type: ignore
-        client = KafkaAdminClient(
-            bootstrap_servers=bootstrap_servers,
-            request_timeout_ms=_CONNECT_TIMEOUT_MS,
-        )
-        topics = client.list_topics()
-        client.close()
-        return {"status": "connected", "bootstrap_servers": bootstrap_servers, "topics": topics}
-    except ImportError:
-        return {"status": "kafka_unavailable", "reason": "kafka-python not installed"}
-    except Exception as exc:
+        host, port_str = bootstrap_servers.rsplit(":", 1)
+        port = int(port_str)
+    except (ValueError, AttributeError):
+        return {"status": "kafka_unavailable", "reason": f"invalid address: {bootstrap_servers}"}
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(_CONNECT_TIMEOUT_MS / 1000)
+    try:
+        sock.connect((host, port))
+        sock.close()
+        return {"status": "connected", "bootstrap_servers": bootstrap_servers}
+    except (OSError, socket.timeout) as exc:
         return {
             "status": "kafka_unavailable",
             "reason": str(exc),

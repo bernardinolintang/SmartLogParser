@@ -9,9 +9,9 @@ const SAMPLE_LINES = [
 ].join('\n');
 
 test('Streaming: start → append → finish returns events', async ({ request }) => {
-  // Start stream
+  // Streaming endpoints use Pydantic JSON bodies — must use json: not data:
   const startRes = await request.post(`${API}/api/stream/start`, {
-    data: { tool_id: 'METRO_TOOL_01', format_hint: 'csv' },
+    json: { tool_id: 'METRO_TOOL_01', format_hint: 'csv' },
   });
   expect(startRes.status()).toBe(200);
   const { run_id } = await startRes.json();
@@ -19,7 +19,7 @@ test('Streaming: start → append → finish returns events', async ({ request }
 
   // Append lines
   const appendRes = await request.post(`${API}/api/stream/append`, {
-    data: { run_id, lines: SAMPLE_LINES },
+    json: { run_id, lines: SAMPLE_LINES },
   });
   expect(appendRes.status()).toBe(200);
   const appendBody = await appendRes.json();
@@ -27,7 +27,7 @@ test('Streaming: start → append → finish returns events', async ({ request }
 
   // Finish
   const finishRes = await request.post(`${API}/api/stream/finish`, {
-    data: { run_id },
+    json: { run_id },
   });
   expect(finishRes.status()).toBe(200);
   const finishBody = await finishRes.json();

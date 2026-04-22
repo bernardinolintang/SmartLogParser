@@ -3,6 +3,8 @@ import { test, expect } from '@playwright/test';
 const API = 'http://localhost:8001';
 
 test('Elasticsearch sync falls back gracefully without real ES', async ({ request }) => {
+  // ES client retries 3x with backoff before falling back — this can take 30-60s
+  test.setTimeout(90_000);
   const res = await request.post(`${API}/api/ingest/sync/ETCH_TOOL_01`);
   // Returns 200 with mock data when ES is unreachable
   expect([200, 422, 500]).toContain(res.status());
