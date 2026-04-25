@@ -9,11 +9,24 @@ interface AnomalyDetectionProps {
   events?: ParsedEvent[];
 }
 
+// ── helpers ─────────────────────────────────────────────────────────────────
+const _CORRUPT_RE = /^err_|^#n\/a$|^0xff{2,}|0xdead|deadbeef|corrupt|unreadable|\?\?\?|\?\?:\?\?/i;
+const _TS_PLACEHOLDER_RE = /\?{2,}/;
+
+function _parseTs(ts: string): number | null {
+  const t = Date.parse(ts);
+  return isNaN(t) ? null : t;
+}
+
 function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
   const Z_THRESHOLD = 2.5;
   const ROLLING_WINDOW = 10;
   const ROLLING_THRESHOLD = 2.0;
+  const ALARM_CASCADE_WINDOW_MS = 30_000;   // 30 s
+  const ALARM_CASCADE_MIN = 3;
+  const TS_GAP_MS = 5 * 60 * 1000;          // 5 min
 
+  // ── Statistical: Z-score + rolling drift (numeric sensor readings only) ──
   const paramReadings: Record<string, Array<{ ts: string; val: number; idx: number }>> = {};
   events.forEach((e, idx) => {
     if (e.event_type !== 'sensor' && e.event_type !== 'info') return;
@@ -24,6 +37,7 @@ function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
   });
 
   const anomalies: AnomalyResult[] = [];
+
   for (const [param, readings] of Object.entries(paramReadings)) {
     if (readings.length < 3) continue;
     const vals = readings.map(r => r.val);
@@ -44,15 +58,16 @@ function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
       }
     }
 
-    const window: number[] = [];
+    const rollingBuf: number[] = [];
     for (const { ts, val, idx } of readings) {
-      if (window.length >= 3) {
-        const wMean = window.reduce((a, b) => a + b, 0) / window.length;
-        const wStd = Math.sqrt(window.reduce((a, b) => a + (b - wMean) ** 2, 0) / window.length);
+      if (rollingBuf.length >= 3) {
+        const wMean = rollingBuf.reduce((a, b) => a + b, 0) / rollingBuf.length;
+        const wStd = Math.sqrt(rollingBuf.reduce((a, b) => a + (b - wMean) ** 2, 0) / rollingBuf.length);
         const rz = wStd > 0 ? Math.abs(val - wMean) / wStd : 0;
         if (rz >= ROLLING_THRESHOLD && !anomalies.find(a => a.event_index === idx && a.type === 'z_score')) {
           anomalies.push({
-            parameter: param, timestamp: ts, value: val, mean: parseFloat(wMean.toFixed(4)), std: parseFloat(wStd.toFixed(4)),
+            parameter: param, timestamp: ts, value: val,
+            mean: parseFloat(wMean.toFixed(4)), std: parseFloat(wStd.toFixed(4)),
             z_score: parseFloat(rz.toFixed(3)),
             type: 'rolling_drift',
             severity: 'warning',
@@ -61,10 +76,124 @@ function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
           });
         }
       }
-      if (window.length >= ROLLING_WINDOW) window.shift();
-      window.push(val);
+      if (rollingBuf.length >= ROLLING_WINDOW) rollingBuf.shift();
+      rollingBuf.push(val);
     }
   }
+
+  // ── Structural checks (all events) ───────────────────────────────────────
+  let alarmCascadeCount = 0;
+  let tsGapCount = 0;
+  let tsReversalCount = 0;
+  let corruptCount = 0;
+  let missingCount = 0;
+
+  // Alarm cascade: sliding window of alarm-severity events
+  const alarmTimes: number[] = [];
+  let cascadeWindow: number[] = [];
+
+  events.forEach((e, idx) => {
+    const param = e.parameter || e.alarm_code || 'event';
+    const ts = e.timestamp;
+
+    // Corrupt field: bad timestamp or error token in value
+    if (!ts || _TS_PLACEHOLDER_RE.test(ts) || _CORRUPT_RE.test(ts)) {
+      corruptCount++;
+      anomalies.push({
+        parameter: param, timestamp: ts || '?', value: String(e.value ?? ''),
+        mean: 0, std: 0, z_score: 0,
+        type: 'corrupt_field', severity: 'alarm',
+        description: `Corrupt timestamp: "${ts}"`,
+        event_index: idx,
+      });
+    } else if (e.value && _CORRUPT_RE.test(String(e.value))) {
+      corruptCount++;
+      anomalies.push({
+        parameter: param, timestamp: ts, value: String(e.value),
+        mean: 0, std: 0, z_score: 0,
+        type: 'corrupt_field', severity: 'alarm',
+        description: `Corrupt value: "${e.value}" in ${param}`,
+        event_index: idx,
+      });
+    }
+
+    // Missing field: blank tool_id or placeholder alarm_code
+    if (!e.tool_id || _TS_PLACEHOLDER_RE.test(e.tool_id)) {
+      missingCount++;
+      anomalies.push({
+        parameter: param, timestamp: ts, value: String(e.value ?? ''),
+        mean: 0, std: 0, z_score: 0,
+        type: 'missing_field', severity: 'warning',
+        description: `Missing tool_id on event #${idx + 1}`,
+        event_index: idx,
+      });
+    }
+    if (e.alarm_code !== undefined && (_TS_PLACEHOLDER_RE.test(e.alarm_code ?? '') || e.alarm_code === '')) {
+      missingCount++;
+      anomalies.push({
+        parameter: param, timestamp: ts, value: String(e.value ?? ''),
+        mean: 0, std: 0, z_score: 0,
+        type: 'missing_field', severity: 'warning',
+        description: `Missing/placeholder alarm_code on event #${idx + 1}`,
+        event_index: idx,
+      });
+    }
+
+    // Alarm cascade
+    if (e.severity === 'alarm' || e.severity === 'critical' || e.event_type === 'alarm') {
+      const t = _parseTs(ts);
+      if (t !== null) {
+        alarmTimes.push(t);
+        cascadeWindow = cascadeWindow.filter(w => t - w <= ALARM_CASCADE_WINDOW_MS);
+        cascadeWindow.push(t);
+        if (cascadeWindow.length === ALARM_CASCADE_MIN) {
+          alarmCascadeCount++;
+          anomalies.push({
+            parameter: param, timestamp: ts, value: String(e.value ?? '1'),
+            mean: 0, std: 0, z_score: 0,
+            type: 'alarm_cascade', severity: 'alarm',
+            description: `Alarm cascade: ${ALARM_CASCADE_MIN}+ alarms within ${ALARM_CASCADE_WINDOW_MS / 1000}s`,
+            event_index: idx,
+          });
+        }
+      }
+    }
+  });
+
+  // Timestamp gap + reversal (sequential pass on parseable timestamps)
+  const tsEvents = events
+    .map((e, idx) => ({ t: _parseTs(e.timestamp), ts: e.timestamp, e, idx }))
+    .filter(x => x.t !== null) as Array<{ t: number; ts: string; e: ParsedEvent; idx: number }>;
+
+  for (let i = 1; i < tsEvents.length; i++) {
+    const prev = tsEvents[i - 1];
+    const curr = tsEvents[i];
+    const diff = curr.t - prev.t;
+
+    if (diff < 0) {
+      tsReversalCount++;
+      anomalies.push({
+        parameter: curr.e.parameter || curr.e.alarm_code || 'event',
+        timestamp: curr.ts, value: String(curr.e.value ?? ''),
+        mean: 0, std: 0, z_score: 0,
+        type: 'timestamp_reversal', severity: 'warning',
+        description: `Timestamp reversal: ${curr.ts} is before previous ${prev.ts}`,
+        event_index: curr.idx,
+      });
+    } else if (diff >= TS_GAP_MS) {
+      tsGapCount++;
+      const mins = (diff / 60_000).toFixed(1);
+      anomalies.push({
+        parameter: curr.e.parameter || curr.e.alarm_code || 'event',
+        timestamp: curr.ts, value: String(curr.e.value ?? ''),
+        mean: 0, std: 0, z_score: 0,
+        type: 'timestamp_gap', severity: 'warning',
+        description: `Timestamp gap of ${mins} min between events`,
+        event_index: curr.idx,
+      });
+    }
+  }
+
   anomalies.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
   const totalReadings = Object.values(paramReadings).reduce((s, r) => s + r.length, 0);
@@ -73,8 +202,13 @@ function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
     anomaly_count: anomalies.length,
     z_score_anomalies: anomalies.filter(a => a.type === 'z_score').length,
     drift_anomalies: anomalies.filter(a => a.type === 'rolling_drift').length,
+    alarm_cascade_anomalies: alarmCascadeCount,
+    timestamp_gap_anomalies: tsGapCount,
+    timestamp_reversal_anomalies: tsReversalCount,
+    corrupt_field_anomalies: corruptCount,
+    missing_field_anomalies: missingCount,
     parameters_with_anomalies: [...new Set(anomalies.map(a => a.parameter))].sort(),
-    total_readings_analysed: totalReadings,
+    total_readings_analysed: Math.max(totalReadings, events.length),
     anomalies,
   };
 }

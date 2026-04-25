@@ -470,8 +470,11 @@ export function parseLog(content: string): ParseResult {
   const equipmentIds = [...new Set(events.map(e => e.equipment_id))];
   const parameters = [...new Set(events.map(e => e.parameter))];
   const timestamps = events.map(e => e.timestamp).filter(Boolean).sort();
+  // Use the first event's run_id as the result-level run_id so AnomalyDetection can trigger
+  const run_id = events[0]?.run_id;
 
   return {
+    run_id,
     format,
     events,
     rawContent: content,
