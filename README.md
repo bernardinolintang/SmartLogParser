@@ -6,6 +6,8 @@ A full-stack observability platform that transforms heterogeneous semiconductor 
 raw logs → format detection → parsing → normalization → validation → structured events → dashboards
 ```
 
+**Live demo:** [https://smart-log-parser.vercel.app](https://smart-log-parser.vercel.app)
+
 ---
 
 ## Quick Start (Recommended — Docker)
@@ -33,13 +35,17 @@ Open [http://localhost:8080](http://localhost:8080).
 docker compose down    # to stop
 ```
 
-### What runs
+### Services
 
 | Service | Port | Description |
 |---------|------|-------------|
 | Frontend | 8080 | React dashboard |
 | Backend | 8001 | FastAPI — parse, store, query |
+| Elasticsearch | 9200 | Fab log storage and upstream indexing |
+| Kibana | 5601 | Log search & visualisation UI |
+| Grafana | 3030 | Metrics dashboards (PostgreSQL / BI API) |
 | Ollama | 11434 | Local AI — no data leaves your machine |
+| Logstash | — | Optional fab-to-backend forwarding pipeline |
 
 ### Production vs Development
 
@@ -80,21 +86,67 @@ Semiconductor tools (plasma etch, CVD/PVD, lithography, metrology) produce high-
 ## Core Capabilities
 
 - **Multi-format ingestion:** JSON, XML, CSV, key-value, syslog, text, hex, binary, **Parquet** — 9 formats, 1 unified schema, 0 events silently discarded
-- **Multi-vendor schema adapters** — Vendor A (SEMI/GEM ControlJob nesting), Vendor B (Parquet/data-lake), generic flat/step schemas. Adding a vendor is a schema adapter, not a core change.
+- **Multi-vendor schema adapters** — SEMI/GEM ControlJob nesting, Parquet/data-lake, flat-row, step-structured, and generic KV formats
 - **Confidence-scored format detection** with ambiguity flag — runs marked `needs_review` when uncertain
 - **Deterministic parsing** for structured formats, LLM fallback for partial/ambiguous lines
 - **Dual LLM support:** Ollama (local, Docker) or Groq (cloud) — auto-selected
 - **Physical limits validation** — readings outside known physical ranges flagged automatically
-- **Statistical anomaly detection** — Z-score (|z| > 2.5) and rolling-mean drift detection (window=10) per parameter, accessible via `GET /api/runs/{run_id}/anomalies`
+- **Statistical anomaly detection** — Z-score (|z| > 2.5), rolling-mean drift (window=10), alarm cascade, timestamp gaps/reversals, corrupt and missing fields — 7 types total
 - **Parser version tracking** — every event stamped with the parser version that created it
 - **Dead letter queue** — fully failed events stored separately with `failed_event_count` reported on every parse
 - **Vendor normalization** (`TEMP_C` → `temperature`, etc.)
 - **Deduplication** within runs
-- **Golden-run baseline** and drift detection
-- **Streaming ingestion** simulation (runs in the background while you navigate)
-- **Industrial bridge** — pull from Elasticsearch, push to Splunk HEC
-- **BI connectors** — Grafana (PostgreSQL direct or `/api/bi/*`), Tableau & Power BI (OData v4 live feed at `/odata/`), Kibana (Elasticsearch)
-- **OData v4 endpoint** — live feed at `/odata/` for any OData-compatible BI tool
+- **Golden-run baseline** and parameter drift detection
+- **Background streaming** — simulation or live backend session that keeps running while you navigate other pages; live event count always visible in the top bar
+- **Elasticsearch upload indexing** — optionally index parsed events on upload for Kibana/Grafana workflows
+- **Industrial bridge** — pull from Elasticsearch, push to Splunk HEC, Kafka consumer/producer
+- **BI connectors** — Grafana (PostgreSQL direct or `/api/bi/*`), Tableau & Power BI (OData v4), Kibana
+
+---
+
+## Dashboard Views
+
+The frontend has 17 views accessible from the sidebar:
+
+| Tab | Group | Description |
+|-----|-------|-------------|
+| Upload | Ingest | Drop or click to upload; auto-detect format; client or backend parse |
+| History | Ingest | Previous uploads stored in localStorage |
+| Streaming | Ingest | Background real-time ingestion simulation; LIVE indicator in top bar |
+| Overview | Monitor | Summary cards + equipment tree view |
+| Health | Monitor | Tool health scores, alarm rates, maintenance indicators |
+| Data | Analyze | Full event table with column filters |
+| Analytics | Analyze | Event distribution, severity breakdown, parameter statistics |
+| Trends | Analyze | Time-series sensor readings per tool/chamber |
+| Recipe | Analyze | Step-by-step recipe execution timeline |
+| Alarms | Investigate | Alarm investigation — context, parameter before trigger, timeline |
+| Anomaly | Investigate | 7-type anomaly detection (Z-score, drift, cascade, gaps, reversals, corrupt, missing) |
+| Golden Run | Investigate | Save a known-good baseline and compare any run against it |
+| Raw Log | Tools | Original log content with event alignment markers |
+| Report | Tools | Exportable engineer narrative report |
+| Compare | Tools | Cross-vendor side-by-side log comparison |
+| Architecture | Tools | System architecture diagram |
+| Profile | — | User profile (name, avatar, colour) stored in localStorage |
+
+### Built-in sample logs
+
+13 sample scenarios available directly in the Upload tab — no file needed:
+
+| Sample | Format | Scenario |
+|--------|--------|----------|
+| `etch_tool_json.json` | JSON | Etch tool with nested ProcessSteps |
+| `deposition_csv.csv` | CSV | CVD deposition sensor trace |
+| `euv_scanner_syslog.log` | Syslog | EUV scanner with alarms |
+| `metrology_kv.log` | Key-Value | CD/overlay metrology readings |
+| `binary_hex.log` | Hex | Binary packed ETCH_TOOL_06 payload |
+| `plasma_etch_01.json` | JSON | Flat-row plasma etch with SECS/GEM event types |
+| `pvd_sputter_01.csv` | CSV | PVD sputter deposition with temperature alarm |
+| `euv_scanner_02.log` | Key-Value | EUV scanner with reticle align and exposure steps |
+| `ald_tool_01.kv` | Key-Value | ALD tool precursor dose cycles |
+| `etch_tool_06_binary.hex` | Hex | HEX_PACKED_V2 binary event stream |
+| `secs_gem_drift.log` | Text | SECS/GEM — gradual thermal drift + duplicate block IDs *(ANOMALY)* |
+| `pvd_alarm_flapping.csv` | CSV | PVD alarm flapping, stuck alarms, severity downgrade *(ANOMALY)* |
+| `multi_chamber_etch.json` | JSON | Multi-chamber etch — CH_A and CH_B simultaneously |
 
 ---
 
@@ -104,26 +156,38 @@ Semiconductor tools (plasma etch, CVD/PVD, lithography, metrology) produce high-
 SmartLogParser/
   backend/
     app/
-      parsers/           Format-specific parsers (json, xml, csv, kv, syslog, text, hex, binary, parquet)
-      services/          Pipeline orchestration, LLM, normalization, validation, Elastic, Splunk
-      routes/            API endpoints
-      utils/             Field mappings, physical limits
-      models.py          ORM: Run, Event, FailedEvent, DriftAlert, RunSummary
-      schemas.py         Pydantic I/O schemas
-      config.py          Settings from .env
-      security.py        Upload policy + CSV hardening
+      parsers/       json, xml, csv, kv, syslog, text, hex, binary, parquet
+      services/      parser_service, format_detector, normalization, validation,
+                     llm_service, deduplication, summary, anomaly_service,
+                     golden_run, elastic_ingestor, splunk_service,
+                     ingestion_bridge, kafka_service
+      routes/        upload, runs, dashboards, stream, synthetic, bi, ingestion, odata, kafka
+      utils/         field mappings, physical limits
+      models.py      ORM: Run, Event, FailedEvent, DriftAlert, RunSummary
+      schemas.py     Pydantic I/O schemas
+      config.py      Settings from .env
+      security.py    Upload policy + CSV hardening
     Dockerfile
     requirements.txt
     sample_logs/
   frontend/
     src/
-      components/
-      pages/
-      lib/api.ts
+      components/    17 feature components + 48 shadcn/ui primitives
+      contexts/      StreamingContext (background streaming provider)
+      pages/         Index (main app), NotFound
+      lib/
+        api.ts       Backend API client
+        logParser.ts Client-side parser (7 formats) + streaming event generator
     Dockerfile
+  e2e/
+    ux-audit.spec.ts  Playwright UX audit suite
+  logstash/
+    pipeline/        fab-forwarder.conf — Logstash → SmartLogParser pipeline
   docker-compose.yml
   setup.sh / setup.bat
+  seed_data.py       Seed Elasticsearch with sample fab events
   .env.example
+  playwright.config.ts
   README.md
   USER_GUIDE.md
   DEVELOPER_GUIDE.md
@@ -163,11 +227,15 @@ Every parser emits the same contract:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/upload` | File upload (multipart) |
-| POST | `/api/parse` | Parse file (multipart) and return normalized events (`store_to_elastic` optional) |
+| POST | `/api/parse` | Parse file and return normalized events (`?store_to_elastic=true\|false`) |
 | POST | `/api/stream/start` | Begin streaming session |
-| POST | `/api/stream/append` | Append chunk |
-| POST | `/api/stream/finish` | Finalize stream |
+| POST | `/api/stream/append` | Append CSV chunk |
+| POST | `/api/stream/finish` | Finalize stream, compute summary |
 | POST | `/api/ingest/sync/{tool_id}` | Pull from Elasticsearch and parse |
+| POST | `/api/ingest/splunk-webhook` | Receive Splunk webhook payload |
+| POST | `/api/ingest/logstash` | Receive single Logstash event |
+| POST | `/api/ingest/logstash/batch` | Receive Logstash batch |
+| POST | `/api/ingest/webhook` | Generic webhook ingestion |
 
 ### Run and analytics
 
@@ -178,7 +246,7 @@ Every parser emits the same contract:
 | GET | `/api/runs/{run_id}/events` | Events with filters |
 | GET | `/api/runs/{run_id}/alarms` | Alarm-severity events |
 | GET | `/api/runs/{run_id}/summary` | Summary metrics |
-| GET | `/api/runs/{run_id}/anomalies` | Z-score & rolling-drift anomalies for the run |
+| GET | `/api/runs/{run_id}/anomalies` | 7-type anomaly detection results |
 | GET | `/api/runs/{run_id}/timeseries` | Parameter readings over time |
 | GET | `/api/runs/{run_id}/timeline` | All events in order |
 | GET | `/api/runs/{run_id}/health` | Health score |
@@ -203,7 +271,7 @@ Every parser emits the same contract:
 | GET | `/api/bi/events` | BI flat events |
 | GET | `/api/bi/timeseries` | BI timeseries |
 | GET | `/api/bi/kpis` | BI KPIs |
-| GET | `/api/synthetic/{format}` | Generate sample log for testing |
+| GET | `/api/synthetic/{format}` | Generate synthetic sample log (json, xml, csv, kv, syslog, text, hex, binary) |
 
 ### OData v4 (Tableau & Power BI live feed)
 
@@ -213,6 +281,14 @@ Every parser emits the same contract:
 | GET | `/odata/$metadata` | OData schema (EDMX XML) |
 | GET | `/odata/events` | Live events feed (supports `$top`, `$skip`, `$filter`) |
 | GET | `/odata/runs` | Live runs feed |
+
+### Kafka
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/kafka/status` | Broker connection status |
+| POST | `/api/kafka/consume` | Consume messages from topic and parse |
+| POST | `/api/kafka/produce` | Produce test events to topic |
 
 ---
 
@@ -224,48 +300,48 @@ Every parser emits the same contract:
 |--------|------|-----------------|
 | File Upload | Primary input | Upload via `http://localhost:8080` |
 | Elasticsearch | Pull source | Set `ELASTIC_URL` in `.env` → `POST /api/ingest/sync/{tool_id}` |
-| Splunk (receive) | Pull via HEC | Configure Splunk forwarder to write to Elasticsearch index |
+| Kafka | Stream source | Set `KAFKA_BOOTSTRAP_SERVERS` in `.env` → `POST /api/kafka/consume` |
+| Splunk Webhook | Push receiver | Send HEC-formatted data to `POST /api/ingest/splunk-webhook` |
+| Logstash | Pipeline forwarder | Configure `logstash/pipeline/fab-forwarder.conf` to point at backend |
 
 ### Outputs (data flows OUT of SmartLogParser)
 
 | System | Role | How to Activate |
 |--------|------|-----------------|
-| Splunk HEC | Push target | Set `SPLUNK_HEC_URL` + `SPLUNK_HEC_TOKEN` in `.env` — auto-pushes after each sync |
-| Grafana | Dashboard | Connect to Supabase PostgreSQL — `docs/grafana_starter_queries.sql` |
-| Tableau | Live dashboard | OData feed → `http://localhost:8001/odata/` |
-| Power BI | Live dashboard | OData feed → `http://localhost:8001/odata/` |
-| Kibana | Log search UI | Browse Elasticsearch index `fab-logs-2026` at `http://localhost:5601` |
-| CSV / JSON export | File export | `GET /api/runs/{run_id}/download/csv` or `/download/json` |
+| Elasticsearch | Upload indexing | Toggle "Store to Elasticsearch" in Upload or `?store_to_elastic=true` |
+| Splunk HEC | Push target | Set `SPLUNK_HEC_URL` + `SPLUNK_HEC_TOKEN` in `.env` |
+| Grafana | Dashboard | Connect to Supabase PostgreSQL → `docs/grafana_starter_queries.sql`, or use `/api/bi/*` |
+| Tableau | Live dashboard | OData → `http://localhost:8001/odata/` |
+| Power BI | Live dashboard | OData → `http://localhost:8001/odata/` |
+| Kibana | Log search UI | Browse index at `http://localhost:5601` |
+| CSV / JSON | File export | `GET /api/runs/{run_id}/download/csv` or `/download/json` |
 
-### Upload → Elasticsearch indexing (optional)
+### Elastic Stack
 
-When the backend is available, uploads can be indexed into Elasticsearch for Kibana/Grafana workflows.
-
-- **Frontend toggle**: “Store parsed events to Elasticsearch”
-- **API flag**: `POST /api/parse?store_to_elastic=true|false`
-
-### Elastic Stack used in this project
-
-| Component | Used | Role |
-|-----------|------|------|
-| **Elasticsearch** | Yes | Stores fab logs and (optionally) parsed upload events |
-| **Kibana** | Yes | Web UI to search/explore Elasticsearch data |
-| **Logstash** | Optional | Forward/bridge logs into downstream systems (configurable pipeline included) |
-
-> This project can run as **EK** (Elasticsearch + Kibana) and optionally include Logstash for forwarding.
+| Component | Role |
+|-----------|------|
+| **Elasticsearch** | Stores fab logs; receives parsed upload events (optional) |
+| **Kibana** | Web UI to search and visualise Elasticsearch data |
+| **Logstash** | Optional — `logstash/pipeline/fab-forwarder.conf` bridges external logs into the backend |
 
 ---
 
 ## Testing
 
-- **Unit tests (frontend)**: `cd frontend; npm test`
-- **E2E UX audit**: `npx playwright test e2e/ux-audit.spec.ts`
+```sh
+# Frontend unit tests
+cd frontend
+npm test
+
+# E2E UX audit (Playwright)
+npx playwright test e2e/ux-audit.spec.ts
+```
 
 ---
 
 ## Security Controls
 
-- Extension allowlist (`.json`, `.xml`, `.csv`, `.log`, `.txt`, `.kv`, `.hex`, `.bin`)
+- Extension allowlist (`.json`, `.xml`, `.csv`, `.log`, `.txt`, `.kv`, `.hex`, `.bin`, `.parquet`)
 - Upload size limit enforced server-side
 - Safe XML parsing via `defusedxml`
 - LLM prompts instruct model to ignore instructions embedded in log content
