@@ -1,6 +1,8 @@
 from elasticsearch import Elasticsearch
 from app.config import settings
 import logging
+from datetime import datetime, timezone
+from typing import Any, Iterable
 
 def get_client():
     """Returns an authenticated Elasticsearch client using app settings."""
@@ -13,6 +15,56 @@ def get_client():
         kwargs["basic_auth"] = auth
 
     return Elasticsearch(settings.elastic_url, **kwargs)
+
+
+def index_events_to_elastic(
+    events: Iterable[dict[str, Any]],
+    *,
+    index_name: str | None = None,
+    source: str = "smartlogparser",
+) -> dict[str, Any]:
+    """
+    Index parsed events into Elasticsearch.
+
+    Notes:
+    - Uses `settings.elastic_index` by default.
+    - Ensures a usable time field by mapping `timestamp` -> `@timestamp` if present.
+    - Best-effort: returns counts and logs failures.
+    """
+    idx = index_name or settings.elastic_index
+    if not idx:
+        raise ValueError("ELASTIC_INDEX is missing from configuration!")
+
+    es = get_client()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    indexed = 0
+    failed = 0
+    last_error: str | None = None
+
+    for ev in events:
+        if not isinstance(ev, dict):
+            continue
+
+        doc = dict(ev)
+        doc.setdefault("ingested_by", source)
+
+        # Ensure we always have a timestamp field for dashboards
+        ts = doc.get("timestamp") or doc.get("@timestamp") or now_iso
+        doc.setdefault("timestamp", ts)
+        doc.setdefault("@timestamp", ts)
+
+        try:
+            es.index(index=idx, document=doc)
+            indexed += 1
+        except Exception as e:
+            failed += 1
+            last_error = str(e)
+
+    if failed:
+        logging.warning("Elasticsearch indexing had %d failures. last_error=%s", failed, last_error)
+
+    return {"indexed": indexed, "failed": failed, "index": idx}
 
 
 def pull_logs_from_elastic(tool_id: str, since_minutes: int = 60):

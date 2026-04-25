@@ -1,12 +1,13 @@
 """Upload and parse log files."""
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.security import validate_upload, sanitize_filename, ensure_upload_dir
 from app.services.parser_service import parse_file
 from app.services.format_detector import looks_binary_bytes
+from app.services.elastic_ingestor import index_events_to_elastic
 
 router = APIRouter(prefix="/api", tags=["upload"])
 
@@ -45,7 +46,11 @@ async def upload_log(file: UploadFile = File(...), db: Session = Depends(get_db)
 
 
 @router.post("/parse")
-async def parse_log_full(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def parse_log_full(
+    file: UploadFile = File(...),
+    store_to_elastic: bool = Query(True),
+    db: Session = Depends(get_db),
+):
     """Parse and return full result matching the frontend ParseResult schema."""
     content_bytes = await file.read()
     ok, err = validate_upload(file.filename or "unknown.txt", len(content_bytes))
@@ -66,6 +71,13 @@ async def parse_log_full(file: UploadFile = File(...), db: Session = Depends(get
 
     result = parse_file(content, file.filename or "unknown.txt", db, raw_bytes=content_bytes)
 
+    es_write = None
+    if store_to_elastic:
+        try:
+            es_write = index_events_to_elastic(result.get("events", []), source="smartlogparser_upload")
+        except Exception as e:
+            es_write = {"indexed": 0, "failed": 0, "error": str(e)}
+
     return {
         "run_id": result["run_id"],
         "format": result["format"],
@@ -78,4 +90,5 @@ async def parse_log_full(file: UploadFile = File(...), db: Session = Depends(get
         "warning_count": result["warning_count"],
         "duplicates_dropped": result["duplicates_dropped"],
         "failed_event_count": result["failed_events"],
+        "elastic": es_write,
     }

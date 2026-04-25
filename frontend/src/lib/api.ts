@@ -69,11 +69,16 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promi
   return res.json() as Promise<T>;
 }
 
-export async function uploadLogToBackend(file: File): Promise<unknown> {
+export async function uploadLogToBackend(
+  file: File,
+  opts?: { storeToElastic?: boolean },
+): Promise<unknown> {
   const form = new FormData();
   form.append('file', file);
 
-  return fetchJson<unknown>(`${API_BASE}/api/parse`, {
+  const store = opts?.storeToElastic ?? true;
+  const qs = `store_to_elastic=${store ? 'true' : 'false'}`;
+  return fetchJson<unknown>(`${API_BASE}/api/parse?${qs}`, {
     method: 'POST',
     body: form,
   });

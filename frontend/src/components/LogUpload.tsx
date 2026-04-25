@@ -28,6 +28,7 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
   const [backendUp, setBackendUp] = useState(false);
   const [parseMode, setParseMode] = useState<'checking' | 'backend' | 'client'>('checking');
   const [statusMsg, setStatusMsg] = useState('Parsing & normalizing...');
+  const [storeToElastic, setStoreToElastic] = useState(true);
 
   useEffect(() => {
     isBackendAvailable().then(ok => {
@@ -41,7 +42,7 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
     setDetectedFormat(null);
     setStatusMsg('Detecting format...');
     try {
-      const result = await uploadLogToBackend(file);
+      const result = await uploadLogToBackend(file, { storeToElastic }) as any;
       setDetectedFormat(result.format as LogFormat);
       setStatusMsg('Normalizing events...');
       await new Promise(r => setTimeout(r, 300));
@@ -78,7 +79,7 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
         setProcessing(false);
       }
     }
-  }, [onParsed]);
+  }, [onParsed, storeToElastic]);
 
   const processClientSide = useCallback(async (content: string, fileName: string) => {
     setProcessing(true);
@@ -140,6 +141,20 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
 
   return (
     <div className="space-y-8">
+      {backendUp && (
+        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <input
+            id="store-to-elastic"
+            type="checkbox"
+            className="accent-primary"
+            checked={storeToElastic}
+            onChange={(e) => setStoreToElastic(e.target.checked)}
+          />
+          <label htmlFor="store-to-elastic" className="select-none">
+            Store parsed events to Elasticsearch (for Kibana/Grafana)
+          </label>
+        </div>
+      )}
       {/* Upload Zone */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -234,6 +249,8 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
           {Object.keys(sampleLogs).map((key, i) => {
             const ext = key.split('.').pop() || '';
             const name = key.split('.')[0].replace(/_/g, ' ');
+            const isAnomaly = key.includes('alarm') || key.includes('drift') || key.includes('flapping');
+            const isSecsGem = key.includes('secs') || key.includes('gem');
             return (
               <motion.button
                 key={key}
@@ -241,14 +258,18 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.05 }}
                 onClick={() => loadSample(key)}
-                className="glass rounded-lg p-4 text-left hover:border-primary/50 transition-all group"
+                className={`glass rounded-lg p-4 text-left hover:border-primary/50 transition-all group ${isAnomaly ? 'border-warning/20' : ''}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <FileText className={`w-5 h-5 transition-colors ${isAnomaly ? 'text-warning group-hover:text-warning/80' : 'text-muted-foreground group-hover:text-primary'}`} />
                     <div>
                       <p className="text-sm font-medium text-foreground capitalize">{name}</p>
-                      <p className="text-xs text-muted-foreground font-mono">.{ext}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-xs text-muted-foreground font-mono">.{ext}</p>
+                        {isAnomaly && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-warning/10 text-warning border border-warning/20">ANOMALY</span>}
+                        {isSecsGem && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-500/10 text-violet-400 border border-violet-400/20">SECS/GEM</span>}
+                      </div>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
