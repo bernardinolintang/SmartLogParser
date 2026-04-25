@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import {
   Cpu, Upload, Table, BarChart3, FileText, GitCompare, ShieldAlert,
   AlertCircle, TrendingUp, Layers, Star, Heart, Radio, FileCode, Map,
-  ChevronLeft, ChevronRight, Menu
+  ChevronLeft, Menu, History, User
 } from 'lucide-react';
 import LogUpload from '@/components/LogUpload';
 import LogSummary from '@/components/LogSummary';
@@ -23,9 +23,23 @@ import ToolHealthDashboard from '@/components/ToolHealthDashboard';
 import StreamingMonitor from '@/components/StreamingMonitor';
 import RawLogViewer from '@/components/RawLogViewer';
 import ArchitectureDiagram from '@/components/ArchitectureDiagram';
+import UploadHistory, { saveToHistory, loadHistory } from '@/components/UploadHistory';
+import ProfilePage from '@/components/ProfilePage';
 import type { ParseResult } from '@/lib/logParser';
 
-type Tab = 'upload' | 'overview' | 'table' | 'analytics' | 'trends' | 'timeline' | 'alarms' | 'anomaly' | 'golden' | 'health' | 'streaming' | 'raw' | 'report' | 'compare' | 'architecture';
+type Tab = 'upload' | 'overview' | 'table' | 'analytics' | 'trends' | 'timeline' | 'alarms' | 'anomaly' | 'golden' | 'health' | 'streaming' | 'raw' | 'report' | 'compare' | 'architecture' | 'history' | 'profile';
+
+function getProfileData() {
+  try {
+    const p = JSON.parse(localStorage.getItem('slp_profile') || 'null');
+    if (!p) return { initials: null, color: 'from-primary to-primary/60', image: '' };
+    const parts = (p.name ?? '').trim().split(/\s+/);
+    const initials = parts[0]
+      ? parts.length === 1 ? parts[0][0].toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : null;
+    return { initials, color: p.avatarColor ?? 'from-primary to-primary/60', image: p.avatarImage ?? '' };
+  } catch { return { initials: null, color: 'from-primary to-primary/60', image: '' }; }
+}
 
 const Index = () => {
   const [result, setResult] = useState<ParseResult | null>(null);
@@ -33,11 +47,24 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState<Tab>('upload');
   const [filter, setFilter] = useState<HierarchyFilter>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [historyCount, setHistoryCount] = useState(() => loadHistory().length);
 
   const handleParsed = useCallback((r: ParseResult, name: string) => {
     setResult(r);
     setFileName(name);
     setActiveTab('overview');
+    saveToHistory({
+      fileName: name,
+      format: r.format,
+      totalEvents: r.summary.totalEvents,
+      alarms: r.summary.alarms,
+      warnings: r.summary.warnings,
+      toolIds: r.summary.toolIds,
+      recipeNames: r.summary.recipeNames,
+      timeRange: r.summary.timeRange,
+      source: r.total_events !== undefined ? 'backend' : 'client',
+    });
+    setHistoryCount(loadHistory().length);
   }, []);
 
   const filteredEvents = useMemo(() => {
@@ -53,6 +80,7 @@ const Index = () => {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; requiresResult?: boolean; group: string }[] = [
     { id: 'upload', label: 'Upload', icon: Upload, group: 'Ingest' },
+    { id: 'history', label: 'History', icon: History, group: 'Ingest' },
     { id: 'streaming', label: 'Streaming', icon: Radio, group: 'Ingest' },
     { id: 'overview', label: 'Overview', icon: Cpu, requiresResult: true, group: 'Monitor' },
     { id: 'health', label: 'Health', icon: Heart, requiresResult: true, group: 'Monitor' },
@@ -120,6 +148,11 @@ const Index = () => {
                           {result!.summary.alarms}
                         </span>
                       )}
+                      {tab.id === 'history' && historyCount > 0 && !hasAlarms && (
+                        <span className="ml-auto px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground text-[9px] font-bold">
+                          {historyCount}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -134,6 +167,34 @@ const Index = () => {
             </div>
           )}
         </nav>
+
+        {/* Profile footer */}
+        <div className="flex-shrink-0 border-t border-border p-2">
+          {(() => {
+            const pd = getProfileData();
+            return (
+              <button
+                onClick={() => setActiveTab('profile')}
+                className={`flex items-center gap-2 w-full px-2 py-2 rounded-lg transition-all ${activeTab === 'profile' ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}
+              >
+                <div className="w-6 h-6 rounded-md overflow-hidden flex-shrink-0">
+                  {pd.image ? (
+                    <img src={pd.image} alt="Profile" className="w-full h-full object-cover" />
+                  ) : pd.initials ? (
+                    <div className={`w-full h-full bg-gradient-to-br ${pd.color} flex items-center justify-center`}>
+                      <span className="text-[10px] font-bold text-white">{pd.initials}</span>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full bg-secondary flex items-center justify-center">
+                      <User className="w-3.5 h-3.5" />
+                    </div>
+                  )}
+                </div>
+                <span className="text-[11px] font-medium truncate">Profile</span>
+              </button>
+            );
+          })()}
+        </div>
       </aside>
 
       {/* Main content */}
@@ -188,6 +249,25 @@ const Index = () => {
                   <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-muted-foreground">
                     Upload logs from any semiconductor equipment vendor. Auto-detect format, normalize parameters, and generate structured analytics.
                   </motion.p>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="flex flex-wrap justify-center gap-2 mt-4"
+                  >
+                    {[
+                      { label: 'JSON', cls: 'bg-primary/10 text-primary border-primary/20' },
+                      { label: 'XML', cls: 'bg-info/10 text-info border-info/20' },
+                      { label: 'CSV', cls: 'bg-success/10 text-success border-success/20' },
+                      { label: 'Syslog', cls: 'bg-warning/10 text-warning border-warning/20' },
+                      { label: 'Key-Value', cls: 'bg-primary/10 text-primary border-primary/20' },
+                      { label: 'Plain Text', cls: 'bg-secondary/50 text-secondary-foreground border-border' },
+                      { label: 'Hex/Binary', cls: 'bg-destructive/10 text-destructive border-destructive/20' },
+                      { label: 'Parquet', cls: 'bg-violet-500/10 text-violet-400 border-violet-400/20' },
+                    ].map(f => (
+                      <span key={f.label} className={`px-2.5 py-0.5 rounded-full border text-[10px] font-medium ${f.cls}`}>{f.label}</span>
+                    ))}
+                  </motion.div>
                 </div>
                 <LogUpload onParsed={handleParsed} />
               </motion.div>
@@ -196,59 +276,146 @@ const Index = () => {
             {activeTab === 'overview' && result && (
               <motion.div key="overview" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <LogSummary result={result} fileName={fileName} />
-                <ToolOverview events={filteredEvents} filter={filter} />
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
+                    <Cpu className="w-5 h-5 text-primary" />
+                    Equipment Overview
+                  </h2>
+                  <ToolOverview events={filteredEvents} filter={filter} />
+                </div>
               </motion.div>
             )}
 
             {activeTab === 'table' && result && (
-              <motion.div key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Table className="w-5 h-5 text-primary" />
+                    Event Data
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    All parsed events with parameters, values, and context. Filter via the equipment tree.
+                  </p>
+                </div>
                 <LogTable events={filteredEvents} fileName={fileName} />
               </motion.div>
             )}
 
             {activeTab === 'analytics' && result && (
-              <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    Analytics Dashboard
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Event distributions, severity breakdown, and parameter statistics.
+                  </p>
+                </div>
                 <AnalyticsDashboard events={filteredEvents} />
               </motion.div>
             )}
 
             {activeTab === 'trends' && result && (
-              <motion.div key="trends" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="trends" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    Parameter Trends
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Time-series view of sensor readings across tools and chambers.
+                  </p>
+                </div>
                 <ParameterTrends events={filteredEvents} filter={filter} />
               </motion.div>
             )}
 
             {activeTab === 'timeline' && result && (
-              <motion.div key="timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="timeline" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-primary" />
+                    Recipe Timeline
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Step-by-step recipe execution timeline with event markers.
+                  </p>
+                </div>
                 <RecipeTimeline events={filteredEvents} />
               </motion.div>
             )}
 
             {activeTab === 'alarms' && result && (
-              <motion.div key="alarms" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="alarms" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-destructive" />
+                    Alarm Investigation
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Click an alarm to inspect event context, parameters before trigger, and timeline.
+                  </p>
+                </div>
                 <AlarmInvestigation events={filteredEvents} />
               </motion.div>
             )}
 
             {activeTab === 'anomaly' && result && (
-              <motion.div key="anomaly" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="anomaly" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <ShieldAlert className="w-5 h-5 text-destructive" />
+                    Anomaly Detection
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    7-type detection: Z-score · Rolling drift · Alarm cascade · Timestamp gap · TS reversal · Corrupt field · Missing field
+                  </p>
+                </div>
                 <AnomalyDetection runId={result?.run_id ?? null} events={result.events} />
               </motion.div>
             )}
 
             {activeTab === 'golden' && result && (
-              <motion.div key="golden" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="golden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Star className="w-5 h-5 text-warning" />
+                    Golden Run Comparison
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Mark a reference run as golden and compare parameter deviations against it.
+                  </p>
+                </div>
                 <GoldenRunCompare events={filteredEvents} />
               </motion.div>
             )}
 
             {activeTab === 'health' && result && (
-              <motion.div key="health" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="health" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-success" />
+                    Tool Health Dashboard
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Equipment health scores, alarm rates, and maintenance indicators.
+                  </p>
+                </div>
                 <ToolHealthDashboard events={filteredEvents} />
               </motion.div>
             )}
             {activeTab === 'streaming' && (
               <motion.div key="streaming" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Radio className="w-5 h-5 text-primary animate-pulse" />
+                    Streaming Monitor
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Real-time log ingestion from fab storage (Elasticsearch) or simulated tool telemetry.
+                  </p>
+                </div>
                 {/* Industrial Sync Component */}
                 <div className="p-6 border border-primary/20 rounded-xl bg-card/40 backdrop-blur-md shadow-glow-sm">
                   <div className="flex items-center gap-3 mb-4">
@@ -300,26 +467,65 @@ const Index = () => {
             )}
 
             {activeTab === 'raw' && result && (
-              <motion.div key="raw" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="raw" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <FileCode className="w-5 h-5 text-primary" />
+                    Raw Log Viewer
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Original log content with event alignment markers.
+                  </p>
+                </div>
                 <RawLogViewer rawContent={result.rawContent} events={filteredEvents} />
               </motion.div>
             )}
 
             {activeTab === 'report' && result && (
-              <motion.div key="report" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="report" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-primary" />
+                    Engineer Report
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Exportable narrative report summarising run events, alarms, and parameters.
+                  </p>
+                </div>
                 <EngineerReport result={result} fileName={fileName} />
               </motion.div>
             )}
 
             {activeTab === 'compare' && (
-              <motion.div key="compare" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="compare" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <GitCompare className="w-5 h-5 text-primary" />
+                    Cross-Vendor Compare
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Side-by-side comparison of logs from different equipment vendors.
+                  </p>
+                </div>
                 <CrossVendorCompare />
               </motion.div>
             )}
 
             {activeTab === 'architecture' && (
-              <motion.div key="architecture" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div key="architecture" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <ArchitectureDiagram />
+              </motion.div>
+            )}
+
+            {activeTab === 'history' && (
+              <motion.div key="history" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <UploadHistory />
+              </motion.div>
+            )}
+
+            {activeTab === 'profile' && (
+              <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                <ProfilePage />
               </motion.div>
             )}
           </div>
