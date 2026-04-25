@@ -1,5 +1,5 @@
 """Ingestion endpoints: Elasticsearch pull, Splunk webhook, Logstash push, generic webhook."""
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import logging
@@ -7,6 +7,7 @@ import logging
 from app.database import get_db
 from app.services.ingestion_bridge import bridge_elastic_to_parser
 from app.services.parser_service import parse_file
+from app.services.elastic_ingestor import index_events_to_elastic
 
 router = APIRouter(prefix="/api/ingest", tags=["ingestion"])
 
@@ -24,7 +25,11 @@ async def sync_from_elastic(tool_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/splunk-webhook")
-async def receive_splunk_webhook(payload: dict, db: Session = Depends(get_db)):
+async def receive_splunk_webhook(
+    payload: dict,
+    store_to_elastic: bool = Query(True),
+    db: Session = Depends(get_db),
+):
     """
     Splunk → SmartLogParser push endpoint.
 
@@ -48,16 +53,27 @@ async def receive_splunk_webhook(payload: dict, db: Session = Depends(get_db)):
     logging.info(f"Splunk webhook received: search='{search_name}', sid='{sid}'")
 
     result = parse_file(raw_log, filename, db)
+    es_write = None
+    if store_to_elastic:
+        try:
+            es_write = index_events_to_elastic(result.get("events", []), source="smartlogparser_splunk_webhook")
+        except Exception as e:
+            es_write = {"indexed": 0, "failed": 0, "error": str(e)}
     return {
         "status": "parsed",
         "source": "splunk_webhook",
         "run_id": result.get("run_id"),
         "total_events": result.get("total_events", 0),
+        "elastic": es_write,
     }
 
 
 @router.post("/logstash")
-async def receive_from_logstash(payload: dict, db: Session = Depends(get_db)):
+async def receive_from_logstash(
+    payload: dict,
+    store_to_elastic: bool = Query(True),
+    db: Session = Depends(get_db),
+):
     """
     Logstash → SmartLogParser push endpoint.
 
@@ -85,16 +101,27 @@ async def receive_from_logstash(payload: dict, db: Session = Depends(get_db)):
     logging.info(f"Logstash event received: tool_id='{tool_id}'")
 
     result = parse_file(message, filename, db)
+    es_write = None
+    if store_to_elastic:
+        try:
+            es_write = index_events_to_elastic(result.get("events", []), source="smartlogparser_logstash")
+        except Exception as e:
+            es_write = {"indexed": 0, "failed": 0, "error": str(e)}
     return {
         "status": "parsed",
         "source": "logstash",
         "run_id": result.get("run_id"),
         "total_events": result.get("total_events", 0),
+        "elastic": es_write,
     }
 
 
 @router.post("/logstash/batch")
-async def receive_batch_from_logstash(payload: List[dict], db: Session = Depends(get_db)):
+async def receive_batch_from_logstash(
+    payload: List[dict],
+    store_to_elastic: bool = Query(True),
+    db: Session = Depends(get_db),
+):
     """
     Logstash batch endpoint — receives multiple events at once.
     Concatenates all messages into a single file so they parse as one Run.
@@ -109,6 +136,12 @@ async def receive_batch_from_logstash(payload: List[dict], db: Session = Depends
     combined = "\n".join(lines)
     filename = f"logstash_batch_{tool_id}.log"
     result = parse_file(combined, filename, db)
+    es_write = None
+    if store_to_elastic:
+        try:
+            es_write = index_events_to_elastic(result.get("events", []), source="smartlogparser_logstash_batch")
+        except Exception as e:
+            es_write = {"indexed": 0, "failed": 0, "error": str(e)}
 
     return {
         "status": "parsed",
@@ -116,12 +149,14 @@ async def receive_batch_from_logstash(payload: List[dict], db: Session = Depends
         "count": len(lines),
         "run_id": result.get("run_id"),
         "total_events": result.get("total_events", 0),
+        "elastic": es_write,
     }
 
 
 @router.post("/webhook")
 async def generic_webhook(
     payload: dict,
+    store_to_elastic: bool = Query(True),
     db: Session = Depends(get_db),
     x_source: Optional[str] = Header(None),
 ):
@@ -149,9 +184,16 @@ async def generic_webhook(
     logging.info(f"Generic webhook received from source='{source}'")
 
     result = parse_file(raw, filename, db)
+    es_write = None
+    if store_to_elastic:
+        try:
+            es_write = index_events_to_elastic(result.get("events", []), source=f"smartlogparser_{source}")
+        except Exception as e:
+            es_write = {"indexed": 0, "failed": 0, "error": str(e)}
     return {
         "status": "parsed",
         "source": source,
         "run_id": result.get("run_id"),
         "total_events": result.get("total_events", 0),
+        "elastic": es_write,
     }

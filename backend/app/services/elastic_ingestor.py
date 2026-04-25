@@ -51,8 +51,11 @@ def index_events_to_elastic(
 
         # Ensure we always have a timestamp field for dashboards
         ts = doc.get("timestamp") or doc.get("@timestamp") or now_iso
-        doc.setdefault("timestamp", ts)
-        doc.setdefault("@timestamp", ts)
+        if not isinstance(ts, str) or not ts.strip():
+            ts = now_iso
+        # Overwrite empty/invalid timestamps to avoid ES date parse errors
+        doc["timestamp"] = ts
+        doc["@timestamp"] = ts
 
         try:
             es.index(index=idx, document=doc)
