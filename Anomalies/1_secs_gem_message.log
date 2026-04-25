@@ -1,0 +1,22 @@
+========================================================================
+SECS/GEM MESSAGE LOG — TOOL: CVD-TOOL-07  DATE: 2024-06-01
+========================================================================
+
+[2024-06-01T08:00:00] S1F3     HOST→EQP     Selected Equipment Status Request
+[2024-06-01T08:00:02] S1F4     EQP→HOST     Selected Equipment Status Reply: READY
+[2024-06-01T08:00:10] S2F41    HOST→EQP     Host Command Send: START_RECIPE R_CVD_001
+[2024-06-01T08:00:12] S2F42    EQP→HOST     Host Command Acknowledge: CMDA=0 (OK)
+[2024-06-01T08:00:15] S6F11    EQP→HOST     Event Report: ProcessStarted LOT=LOT_2024_0601
+[2024-06-01T08:00:45] S6F11    EQP→HOST     Event Report: TEMP_SENSOR=325.4 (nominal)
+[2024-06-01T08:01:00] S6F11    EQP→HOST     Event Report: TEMP_SENSOR=331.2 (nominal)
+[2024-06-01T08:01:15] S6F11    EQP→HOST     Event Report: TEMP_SENSOR=412.9 *** OUT-OF-SPEC [LIMIT:320-380C] ***  [!ANOMALY:OUT_OF_RANGE]
+[2024-06-01T08:01:16] S5F1     EQP→HOST     Alarm Report: ALID=0x0A ALTX='Thermal runaway detected'  [!ANOMALY:ALARM]
+[2024-06-01T08:01:17] S5F1     EQP→HOST     Alarm Report: ALID=0x0B ALTX='Process abort triggered'  [!ANOMALY:ALARM]
+[2024-06-01T08:01:17] S5F1     EQP→HOST     Alarm Report: ALID=0x0C ALTX='Safety interlock engaged'  [!ANOMALY:ALARM]
+[2024-06-01T08:01:10] S6F11    EQP→HOST     Event Report: PRESSURE=4.2E-5 [TIMESTAMP REVERSAL DETECTED]  [!ANOMALY:TS_REVERSAL]
+[2024-06-01T08:01:20] S2F41    HOST→EQP     Host Command Send: ABORT
+[2024-06-01T08:01:22] S2F42    EQP→HOST     Host Command Acknowledge: CMDA=0 (OK)
+[2024-06-01T08:03:20] S1F13    HOST→EQP     Establish Communications Request [GAP: 118s]  [!ANOMALY:TS_GAP]
+[2024-06-01T08:03:21] S1F14    EQP→HOST     Establish Communications Acknowledge
+[2024-06-01T08:03:25] S6F??    EQP→HOST     Event Report: [CORRUPTED FIELD — SFID UNREADABLE] DATA=0xFFFFDEAD  [!ANOMALY:CORRUPT]
+[2024-06-01T08:03:30] S6F11    EQP→HOST     Event Report: ProcessEnded LOT=LOT_2024_0601 STATUS=ABORT

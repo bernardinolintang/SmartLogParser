@@ -1,0 +1,118 @@
+{
+  "tool": "IMP-TOOL-01",
+  "date": "2024-06-01",
+  "events": [
+    {
+      "timestamp": "2024-06-01T08:00:00",
+      "toolID": "IMP-TOOL-01",
+      "state": "IDLE",
+      "prevState": "OFFLINE",
+      "durationSec": 0,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-06-01T08:05:10",
+      "toolID": "IMP-TOOL-01",
+      "state": "SETUP",
+      "prevState": "IDLE",
+      "durationSec": 310,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-06-01T08:10:20",
+      "toolID": "IMP-TOOL-01",
+      "state": "PROCESSING",
+      "prevState": "SETUP",
+      "durationSec": 610,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-06-01T08:20:30",
+      "toolID": "IMP-TOOL-01",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 1230,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-06-01T08:25:00",
+      "toolID": "IMP-TOOL-01",
+      "state": "ALARM",
+      "prevState": "IDLE",
+      "durationSec": 270,
+      "anomaly": "ALARM:UnexpectedStateTransition"
+    },
+    {
+      "timestamp": "2024-06-01T08:25:05",
+      "toolID": "IMP-TOOL-01",
+      "state": "ALARM",
+      "prevState": "ALARM",
+      "durationSec": 5,
+      "anomaly": "ALARM_CASCADE"
+    },
+    {
+      "timestamp": "2024-06-01T08:25:09",
+      "toolID": "IMP-TOOL-01",
+      "state": "ALARM",
+      "prevState": "ALARM",
+      "durationSec": 4,
+      "anomaly": "ALARM_CASCADE"
+    },
+    {
+      "timestamp": "2024-06-01T08:25:11",
+      "toolID": "IMP-TOOL-01",
+      "state": "ALARM",
+      "prevState": "ALARM",
+      "durationSec": 2,
+      "anomaly": "ALARM_CASCADE"
+    },
+    {
+      "timestamp": "2024-06-01T09:00:00",
+      "toolID": "IMP-TOOL-01",
+      "state": "PROCESSING",
+      "prevState": "IDLE",
+      "durationSec": null,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-06-01T13:22:00",
+      "toolID": "IMP-TOOL-01",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 15720,
+      "anomaly": "OUT_OF_RANGE:ProcessingDuration"
+    },
+    {
+      "timestamp": "2024-06-01T17:00:00",
+      "toolID": "IMP-TOOL-01",
+      "state": "SETUP",
+      "prevState": "IDLE",
+      "durationSec": 0,
+      "anomaly": "TS_GAP:3.6hr"
+    },
+    {
+      "timestamp": null,
+      "toolID": "IMP-TOOL-01",
+      "state": null,
+      "prevState": "SETUP",
+      "durationSec": null,
+      "anomaly": "CORRUPT:NullTimestamp"
+    },
+    {
+      "timestamp": "2024-06-01T16:55:00",
+      "toolID": "IMP-TOOL-01",
+      "state": "PROCESSING",
+      "prevState": "SETUP",
+      "durationSec": 300,
+      "anomaly": "TS_REVERSAL"
+    },
+    {
+      "timestamp": "2024-06-01T17:20:00",
+      "toolID": null,
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 300,
+      "anomaly": "MISSING_FIELD:toolID"
+    }
+  ]
+}

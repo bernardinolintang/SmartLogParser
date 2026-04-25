@@ -1,0 +1,27 @@
+WAFER LOT TRACE LOG
+Tool   : PVD-SPUTTER-02
+LotID  : LOT_2024_0601_B
+Recipe : R_PVD_TiN_300mm_V2
+------------------------------------------------------------
+  2024-06-01 10:00:05  WAF_001    LOAD         25LOT    OK        
+  2024-06-01 10:02:10  WAF_001    PRECLEAN     0:45     OK        
+  2024-06-01 10:03:00  WAF_001    DEPOSIT      3:00     OK        
+  2024-06-01 10:06:05  WAF_001    UNLOAD       25LOT    OK        
+  2024-06-01 10:06:30  WAF_002    LOAD         25LOT    OK        
+  2024-06-01 10:08:00  WAF_002    PRECLEAN     0:45     OK        
+  2024-06-01 10:09:10  WAF_002    DEPOSIT      3:00     OK        
+  2024-06-01 10:12:15  WAF_002    UNLOAD       25LOT    OK        
+  2024-06-01 10:12:45  WAF_003    LOAD         25LOT    OK        
+  2024-06-01 10:14:00  WAF_003    PRECLEAN     0:45     OK        
+  2024-06-01 10:15:00  WAF_003    DEPOSIT      9:47     TIMEOUT     ← [!ANOMALY:OUT_OF_RANGE:DepTime]
+  2024-06-01 10:24:47  WAF_003    UNLOAD       25LOT    ALARM       ← [!ANOMALY:ALARM]
+  2024-06-01 10:25:00  ??????     LOAD         25LOT    OK          ← [!ANOMALY:MISSING_FIELD:WaferID]
+  2024-06-01 10:26:00  ??????     DEPOSIT      3:00     OK          ← [!ANOMALY:MISSING_FIELD:WaferID]
+  2024-06-01 10:29:05  ??????     UNLOAD       25LOT    OK          ← [!ANOMALY:MISSING_FIELD:WaferID]
+  2024-06-01 14:05:00  WAF_004    LOAD         25LOT    OK          ← [!ANOMALY:TS_GAP:3.6hr]
+  2024-06-01 14:07:10  WAF_004    PRECLEAN     0:45     OK        
+  2024-06-01 14:04:55  WAF_004    DEPOSIT      3:00     OK          ← [!ANOMALY:TS_REVERSAL]
+  2024-06-01 14:12:00  WAF_004    UNLOAD       25LOT    OK        
+  2024-06-01 14:13:??  WAF_005    ??STEP??     ?.??     ???         ← [!ANOMALY:CORRUPT]
+------------------------------------------------------------
+END OF LOG

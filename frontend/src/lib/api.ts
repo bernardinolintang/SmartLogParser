@@ -35,9 +35,9 @@ export interface GoldenCompareResponse {
 export interface AnomalyResult {
   parameter: string;
   timestamp: string;
-  value: number;
+  value: number | string;
   z_score: number;
-  type: 'z_score' | 'rolling_drift';
+  type: 'z_score' | 'rolling_drift' | 'alarm_cascade' | 'timestamp_gap' | 'timestamp_reversal' | 'corrupt_field' | 'missing_field';
   severity: 'alarm' | 'warning';
   description: string;
   mean: number;
@@ -50,6 +50,11 @@ export interface AnomalyResponse {
   anomaly_count: number;
   z_score_anomalies: number;
   drift_anomalies: number;
+  alarm_cascade_anomalies?: number;
+  timestamp_gap_anomalies?: number;
+  timestamp_reversal_anomalies?: number;
+  corrupt_field_anomalies?: number;
+  missing_field_anomalies?: number;
   parameters_with_anomalies: string[];
   total_readings_analysed: number;
   anomalies: AnomalyResult[];

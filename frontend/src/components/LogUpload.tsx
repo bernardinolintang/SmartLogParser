@@ -12,11 +12,13 @@ interface LogUploadProps {
 const FORMAT_LABELS: Record<LogFormat, string> = {
   json: 'JSON', xml: 'XML', csv: 'CSV',
   syslog: 'Syslog', text: 'Plain Text', hex: 'Binary/Hex', keyvalue: 'Key-Value', kv: 'Key-Value',
+  parquet: 'Parquet', binary: 'Binary',
 };
 
 const FORMAT_COLORS: Record<LogFormat, string> = {
   json: 'text-primary', xml: 'text-info', csv: 'text-success',
   syslog: 'text-warning', text: 'text-secondary-foreground', hex: 'text-destructive', keyvalue: 'text-primary', kv: 'text-primary',
+  parquet: 'text-violet-400', binary: 'text-destructive',
 };
 
 export default function LogUpload({ onParsed }: LogUploadProps) {
@@ -101,8 +103,12 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
   }, [backendUp, processViaBackend, processClientSide]);
 
   const handleFile = useCallback((file: File) => {
+    const isParquet = file.name.toLowerCase().endsWith('.parquet');
     if (backendUp) {
       processViaBackend(file);
+    } else if (isParquet) {
+      setProcessing(false);
+      setStatusMsg('Parquet files require backend. Please start the backend server.');
     } else {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -154,7 +160,7 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
             }
           `}
         >
-          <input type="file" className="hidden" onChange={handleFileInput} accept=".json,.xml,.csv,.log,.txt,.hex,.kv" />
+          <input type="file" className="hidden" onChange={handleFileInput} accept=".json,.xml,.csv,.log,.txt,.hex,.kv,.parquet" />
           <AnimatePresence mode="wait">
             {processing ? (
               <motion.div
@@ -196,7 +202,7 @@ export default function LogUpload({ onParsed }: LogUploadProps) {
                 <div className="text-center">
                   <p className="text-foreground font-medium">Drop a log file or click to upload</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    JSON · XML · CSV · Syslog · Text · Hex · Key-Value
+                    JSON · XML · CSV · Syslog · Text · Hex · Key-Value · Parquet
                   </p>
                   <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px]">
                     {backendUp ? (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ShieldAlert, AlertTriangle, CheckCircle, Activity, TrendingUp, Loader2 } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, CheckCircle, Activity, TrendingUp, Loader2, Clock, Zap, FileWarning, Hash } from 'lucide-react';
 import { fetchRunAnomalies, type AnomalyResponse, type AnomalyResult } from '@/lib/api';
 import type { ParsedEvent } from '@/lib/logParser';
 
@@ -139,6 +139,13 @@ export default function AnomalyDetection({ runId, events = [] }: AnomalyDetectio
   const criticalCount = data.anomalies.filter(a => a.severity === 'alarm').length;
   const warningCount = data.anomalies.filter(a => a.severity === 'warning').length;
 
+  const cascadeCount  = data.alarm_cascade_anomalies ?? 0;
+  const gapCount      = data.timestamp_gap_anomalies ?? 0;
+  const reversalCount = data.timestamp_reversal_anomalies ?? 0;
+  const corruptCount  = data.corrupt_field_anomalies ?? 0;
+  const missingCount  = data.missing_field_anomalies ?? 0;
+  const hasStructural = cascadeCount + gapCount + reversalCount + corruptCount + missingCount > 0;
+
   // Build per-parameter summary from the anomaly list
   const paramStats: Record<string, { mean: number; std: number; anomalyCount: number; hasCritical: boolean; hasWarning: boolean }> = {};
   for (const a of data.anomalies) {
@@ -187,7 +194,7 @@ export default function AnomalyDetection({ runId, events = [] }: AnomalyDetectio
               {data.anomaly_count > 0 && ` across ${data.total_readings_analysed} readings`}
             </p>
           </div>
-          <div className="flex gap-4 text-right text-xs text-muted-foreground">
+          <div className="flex gap-3 text-right text-xs text-muted-foreground flex-wrap justify-end">
             <div>
               <p className="text-foreground font-semibold text-base">{data.z_score_anomalies}</p>
               <p>Z-score</p>
@@ -196,6 +203,11 @@ export default function AnomalyDetection({ runId, events = [] }: AnomalyDetectio
               <p className="text-foreground font-semibold text-base">{data.drift_anomalies}</p>
               <p>Drift</p>
             </div>
+            {cascadeCount > 0 && <div><p className="text-destructive font-semibold text-base">{cascadeCount}</p><p>Cascade</p></div>}
+            {gapCount > 0 && <div><p className="text-warning font-semibold text-base">{gapCount}</p><p>TS Gap</p></div>}
+            {reversalCount > 0 && <div><p className="text-warning font-semibold text-base">{reversalCount}</p><p>Reversal</p></div>}
+            {corruptCount > 0 && <div><p className="text-destructive font-semibold text-base">{corruptCount}</p><p>Corrupt</p></div>}
+            {missingCount > 0 && <div><p className="text-warning font-semibold text-base">{missingCount}</p><p>Missing</p></div>}
           </div>
         </div>
       </motion.div>
@@ -237,8 +249,9 @@ export default function AnomalyDetection({ runId, events = [] }: AnomalyDetectio
         <Activity className="w-3.5 h-3.5 flex-shrink-0" />
         <span>
           <span className="font-medium text-foreground">{isLocal ? 'Client-side detection' : 'Server-side detection'}</span> —
-          Z-score (|z|&gt;2.5 flags outliers) + rolling-mean drift (window=10, |z|&gt;2.0 flags parameter drift).
-          {isLocal && <span className="text-warning ml-1">(Backend offline — results computed locally)</span>}
+          Statistical: Z-score (|z|&gt;2.5) + rolling-mean drift (window=10, |z|&gt;2.0).
+          {hasStructural && <> Structural: alarm cascades, timestamp gaps/reversals, corrupt &amp; missing fields.</>}
+          {isLocal && <span className="text-warning ml-1">(Backend offline — structural checks unavailable)</span>}
           {data.parameters_with_anomalies.length > 0 && (
             <> Flagged: <span className="font-medium text-foreground">{data.parameters_with_anomalies.join(', ')}</span>.</>
           )}
@@ -281,16 +294,23 @@ export default function AnomalyDetection({ runId, events = [] }: AnomalyDetectio
                         </span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          a.type === 'z_score'
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-secondary/30 text-secondary-foreground'
-                        }`}>
-                          {a.type === 'z_score'
-                            ? <Activity className="w-3 h-3" />
-                            : <TrendingUp className="w-3 h-3" />}
-                          {a.type === 'z_score' ? 'Z-Score' : 'Drift'}
-                        </span>
+                        {(() => {
+                          const typeConfig: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+                            z_score:             { label: 'Z-Score',    cls: 'bg-primary/10 text-primary',            icon: <Activity className="w-3 h-3" /> },
+                            rolling_drift:       { label: 'Drift',      cls: 'bg-secondary/30 text-secondary-foreground', icon: <TrendingUp className="w-3 h-3" /> },
+                            alarm_cascade:       { label: 'Cascade',    cls: 'bg-destructive/20 text-destructive',    icon: <Zap className="w-3 h-3" /> },
+                            timestamp_gap:       { label: 'TS Gap',     cls: 'bg-warning/20 text-warning',            icon: <Clock className="w-3 h-3" /> },
+                            timestamp_reversal:  { label: 'Reversal',   cls: 'bg-warning/20 text-warning',            icon: <Clock className="w-3 h-3" /> },
+                            corrupt_field:       { label: 'Corrupt',    cls: 'bg-destructive/20 text-destructive',    icon: <FileWarning className="w-3 h-3" /> },
+                            missing_field:       { label: 'Missing',    cls: 'bg-warning/20 text-warning',            icon: <Hash className="w-3 h-3" /> },
+                          };
+                          const cfg = typeConfig[a.type] ?? { label: a.type, cls: 'bg-muted/30 text-muted-foreground', icon: <Activity className="w-3 h-3" /> };
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>
+                              {cfg.icon}{cfg.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-2.5 text-xs text-foreground">{a.parameter}</td>
                       <td className={`px-4 py-2.5 text-xs text-right font-mono font-bold ${

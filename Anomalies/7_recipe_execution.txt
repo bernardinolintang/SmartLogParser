@@ -1,0 +1,27 @@
+======================================================================
+RECIPE EXECUTION LOG
+Tool    : ALD-TOOL-05
+Recipe  : R_ALD_Al2O3_10nm_V4
+Operator: AUTO
+======================================================================
+  [2024-06-01 11:00:00] STEP_01   PurgeN2            Expected: 30s          Actual: 30s          PASS
+  [2024-06-01 11:00:30] STEP_02   SetTemp            Expected: 250C         Actual: 250.2C       PASS
+  [2024-06-01 11:01:00] STEP_03   PulseReactantA     Expected: 0.1s         Actual: 0.1s         PASS
+  [2024-06-01 11:01:01] STEP_04   PurgeN2            Expected: 10s          Actual: 10s          PASS
+  [2024-06-01 11:01:11] STEP_05   PulseReactantB     Expected: 0.15s        Actual: 0.15s        PASS
+  [2024-06-01 11:01:26] STEP_06   PurgeN2            Expected: 10s          Actual: 10s          PASS
+  [2024-06-01 11:01:36] STEP_07   PulseReactantA     Expected: 0.1s         Actual: 2.87s        FAIL  ← [!ANOMALY:OUT_OF_RANGE:PulseTime_28x]
+  [2024-06-01 11:01:39] STEP_08   PurgeN2            Expected: 10s          Actual: 10s          PASS
+  [2024-06-01 11:01:49] STEP_09   PulseReactantB     Expected: 0.15s        Actual: 0.15s        PASS
+  [2024-06-01 11:02:04] STEP_10   PurgeN2            Expected: 10s          Actual: ???          UNKNOWN  ← [!ANOMALY:MISSING_FIELD:ActualDuration]
+  [2024-06-01 11:02:14] STEP_11   SetPressure        Expected: 1mTorr       Actual: 88mTorr      FAIL  ← [!ANOMALY:ALARM:PressureOutOfRange]
+  [2024-06-01 11:02:14] STEP_11   [ALARM]            ALM_P01                ChamberLeak          ACTIVE  ← [!ANOMALY:ALARM_CASCADE]
+  [2024-06-01 11:02:15] STEP_11   [ALARM]            ALM_P02                PumpFault            ACTIVE  ← [!ANOMALY:ALARM_CASCADE]
+  [2024-06-01 11:02:15] STEP_11   [ALARM]            ALM_S01                SafetyInterlock      ACTIVE  ← [!ANOMALY:ALARM_CASCADE]
+  [2024-06-01 14:30:00] STEP_12   RecipeResume       GAP: 3h27m             MaintComplete        RESUMED  ← [!ANOMALY:TS_GAP:3.5hr]
+  [2024-06-01 14:28:55] STEP_13   PulseReactantA     Expected: 0.1s         Actual: 0.1s         PASS  ← [!ANOMALY:TS_REVERSAL]
+  [2024-06-01 14:30:15] STEP_14   PurgeN2            Expected: 10s          Actual: 10s          PASS
+  [2024-06-01 14:??:??] STEP_??   [CORRUPTED]        Expected: ???          Actual: ???          ???  ← [!ANOMALY:CORRUPT]
+  [2024-06-01 14:31:00] STEP_15   EndRecipe          Expected: OK           Actual: PARTIAL      PARTIAL
+======================================================================
+RECIPE END: PARTIAL COMPLETION — 11/15 steps PASS

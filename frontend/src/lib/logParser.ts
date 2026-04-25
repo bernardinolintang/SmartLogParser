@@ -1,6 +1,6 @@
 // Log parsing engine - detects format and parses semiconductor tool logs
 
-export type LogFormat = 'json' | 'xml' | 'csv' | 'syslog' | 'text' | 'hex' | 'keyvalue' | 'kv';
+export type LogFormat = 'json' | 'xml' | 'csv' | 'syslog' | 'text' | 'hex' | 'keyvalue' | 'kv' | 'parquet' | 'binary';
 
 export interface ParsedEvent {
   timestamp: string;
