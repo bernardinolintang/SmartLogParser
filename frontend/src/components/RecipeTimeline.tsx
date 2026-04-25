@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Layers, AlertCircle } from 'lucide-react';
+import { Layers, AlertCircle, GitBranch } from 'lucide-react';
 import type { ParsedEvent } from '@/lib/logParser';
 
 interface RecipeTimelineProps {
@@ -35,9 +35,14 @@ export default function RecipeTimeline({ events }: RecipeTimelineProps) {
 
   if (timelines.length === 0) {
     return (
-      <div className="glass rounded-xl p-8 text-center">
-        <p className="text-muted-foreground text-sm">No recipe step data available</p>
-      </div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-10 text-center space-y-3">
+        <GitBranch className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+        <p className="text-foreground font-medium text-sm">No recipe step data found</p>
+        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+          This log does not contain recipe step information. Recipe timelines are available for
+          structured SECS/GEM or FDC logs that include step identifiers (e.g. MainEtch, Purge, Pump).
+        </p>
+      </motion.div>
     );
   }
 

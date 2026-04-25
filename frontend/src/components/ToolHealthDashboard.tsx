@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Heart, AlertCircle, Activity, TrendingDown } from 'lucide-react';
+import { Heart, AlertCircle, Activity, TrendingDown, Gauge } from 'lucide-react';
 import type { ParsedEvent } from '@/lib/logParser';
 
 interface ToolHealthDashboardProps {
@@ -87,6 +87,19 @@ export default function ToolHealthDashboard({ events }: ToolHealthDashboardProps
 
     return { chamberStats, drifts };
   }, [events]);
+
+  if (health.chamberStats.length === 0) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-10 text-center space-y-3">
+        <Gauge className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+        <p className="text-foreground font-medium text-sm">No equipment data to score</p>
+        <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+          Health scores are computed from sensor readings and alarm rates. This log contains no
+          numeric sensor parameters. Try uploading an FDC trace or SECS/GEM sensor log.
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">

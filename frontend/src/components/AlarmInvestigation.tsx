@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Clock, ChevronRight, Cpu, Box, BookOpen, Layers } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, ChevronRight, Cpu, Box, BookOpen, Layers } from 'lucide-react';
 import type { ParsedEvent } from '@/lib/logParser';
 
 interface AlarmInvestigationProps {
@@ -49,7 +49,7 @@ export default function AlarmInvestigation({ events }: AlarmInvestigationProps) 
   if (alarms.length === 0) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-8 text-center">
-        <AlertCircle className="w-8 h-8 text-success mx-auto mb-3" />
+        <CheckCircle2 className="w-8 h-8 text-success mx-auto mb-3" />
         <p className="text-foreground font-medium">No Alarms Detected</p>
         <p className="text-sm text-muted-foreground mt-1">All events are within normal operational parameters.</p>
       </motion.div>

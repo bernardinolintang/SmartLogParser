@@ -11,9 +11,16 @@ interface ToolOverviewProps {
 
 export default function ToolOverview({ events, filter }: ToolOverviewProps) {
   const overview = useMemo(() => {
-    const tools = [...new Set(events.map(e => e.tool_id))];
+    let filteredEvts = events;
+    if (filter.tool_id) filteredEvts = filteredEvts.filter(e => e.tool_id === filter.tool_id);
+    if (filter.chamber_id) filteredEvts = filteredEvts.filter(e => e.chamber_id === filter.chamber_id);
+    if (filter.recipe_name) filteredEvts = filteredEvts.filter(e => e.recipe_name === filter.recipe_name);
+    if (filter.recipe_step) filteredEvts = filteredEvts.filter(e => e.recipe_step === filter.recipe_step);
+    if (filter.run_id) filteredEvts = filteredEvts.filter(e => e.run_id === filter.run_id);
+
+    const tools = [...new Set(filteredEvts.map(e => e.tool_id))];
     return tools.map(toolId => {
-      const toolEvents = events.filter(e => e.tool_id === toolId);
+      const toolEvents = filteredEvts.filter(e => e.tool_id === toolId);
       const chambers = [...new Set(toolEvents.map(e => e.chamber_id))];
       const recipes = [...new Set(toolEvents.map(e => e.recipe_name).filter(Boolean))];
       const runs = [...new Set(toolEvents.map(e => e.run_id))];
@@ -47,13 +54,23 @@ export default function ToolOverview({ events, filter }: ToolOverviewProps) {
         currentChamber: latest?.chamber_id || 'N/A',
       };
     });
-  }, [events]);
+  }, [events, filter]);
+
+  const filteredForCards = useMemo(() => {
+    let e = events;
+    if (filter.tool_id) e = e.filter(ev => ev.tool_id === filter.tool_id);
+    if (filter.chamber_id) e = e.filter(ev => ev.chamber_id === filter.chamber_id);
+    if (filter.recipe_name) e = e.filter(ev => ev.recipe_name === filter.recipe_name);
+    if (filter.recipe_step) e = e.filter(ev => ev.recipe_step === filter.recipe_step);
+    if (filter.run_id) e = e.filter(ev => ev.run_id === filter.run_id);
+    return e;
+  }, [events, filter]);
 
   const cards = [
     { icon: Cpu, label: 'Total Tools', value: overview.length, color: 'text-primary' },
-    { icon: Box, label: 'Chambers', value: [...new Set(events.map(e => e.chamber_id))].length, color: 'text-info' },
-    { icon: AlertCircle, label: 'Active Alarms', value: events.filter(e => e.severity === 'alarm').length, color: 'text-destructive' },
-    { icon: Hash, label: 'Total Runs', value: [...new Set(events.map(e => e.run_id))].length, color: 'text-success' },
+    { icon: Box, label: 'Chambers', value: [...new Set(filteredForCards.map(e => e.chamber_id))].length, color: 'text-info' },
+    { icon: AlertCircle, label: 'Active Alarms', value: filteredForCards.filter(e => e.severity === 'alarm').length, color: 'text-destructive' },
+    { icon: Hash, label: 'Total Runs', value: [...new Set(filteredForCards.map(e => e.run_id))].length, color: 'text-success' },
   ];
 
   return (

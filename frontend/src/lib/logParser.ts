@@ -659,6 +659,44 @@ timestamp=2026-03-10T12:03:30Z tool_id=ALD_TOOL_01 chamber_id=CH_ALD recipe_name
 67CE 5400 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0503 0142 8400 0000 36
 67CE 5460 4554 4348 5F54 4F4F 4C5F 3036 4348 5F42 0502 FF00 0000 0000 69`,
 
+    'secs_gem_drift.log': `========================================================================
+SECS/GEM MESSAGE LOG — TOOL: CVD-TOOL-12  DATE: 2024-07-15
+Scenario: Gradual temperature drift + duplicate S-block IDs
+========================================================================
+[2024-07-15T06:00:00] S1F3     HOST→EQP     Status Request
+[2024-07-15T06:00:02] S1F4     EQP→HOST     Status Reply: READY
+[2024-07-15T06:00:10] S2F41    HOST→EQP     Start Recipe R_CVD_SiN_V2
+[2024-07-15T06:00:20] S6F11    EQP→HOST     TEMP_SENSOR=301.1
+[2024-07-15T06:00:35] S6F11    EQP→HOST     TEMP_SENSOR=303.4
+[2024-07-15T06:00:50] S6F11    EQP→HOST     TEMP_SENSOR=306.8
+[2024-07-15T06:01:05] S6F11    EQP→HOST     TEMP_SENSOR=312.2
+[2024-07-15T06:01:20] S6F11    EQP→HOST     TEMP_SENSOR=319.9 [DRIFT WARNING: +18.8C/min]  [!ANOMALY:OUT_OF_RANGE:GradualDrift]
+[2024-07-15T06:01:35] S6F11    EQP→HOST     TEMP_SENSOR=329.5 [DRIFT CONTINUING]  [!ANOMALY:OUT_OF_RANGE:GradualDrift]
+[2024-07-15T06:01:50] S6F11    EQP→HOST     TEMP_SENSOR=344.7 [DRIFT CONTINUING]  [!ANOMALY:OUT_OF_RANGE:GradualDrift]
+[2024-07-15T06:02:00] S5F1     EQP→HOST     Alarm: ALID=0x1A 'Thermal drift out of spec'  [!ANOMALY:ALARM]
+[2024-07-15T06:02:00] S5F1     EQP→HOST     Alarm: ALID=0x1A [DUPLICATE BLOCK ID]  [!ANOMALY:CORRUPT:DuplicateBlockID]
+[2024-07-15T06:02:05] S2F41    HOST→EQP     ABORT command sent
+[2024-07-15T06:02:10] S6F11    EQP→HOST     Event: ProcessAborted [S2F42 ACK MISSING]  [!ANOMALY:MISSING_FIELD:S2F42_Ack]
+[2024-07-15T06:10:00] S1F13    HOST→EQP     Re-establish comms after 470s gap  [!ANOMALY:TS_GAP:470s]
+[2024-07-15T06:10:01] S1F14    EQP→HOST     Comms re-established
+[2024-07-15T06:09:58] S6F11    EQP→HOST     Event: SafetyReset [TIMESTAMP REVERSAL]  [!ANOMALY:TS_REVERSAL]`,
+
+    'pvd_alarm_flapping.csv': `Timestamp,ToolID,AlarmID,Severity,AlarmCode,Description,Status,AnomalyFlag
+2024-07-15 07:00:00,PVD-01,A001,INFO,EVT_001,Recipe loaded: R_PVD_Cu_V1,CLEARED,
+2024-07-15 07:02:00,PVD-01,A002,INFO,EVT_002,Process started: LOT_PVD_0715,CLEARED,
+2024-07-15 07:10:00,PVD-01,A003,WARNING,ALM_201,Target power instability,ACTIVE,ALARM
+2024-07-15 07:10:15,PVD-01,A003,WARNING,ALM_201,Target power instability,CLEARED,ALARM:Flapping
+2024-07-15 07:10:30,PVD-01,A003,WARNING,ALM_201,Target power instability,ACTIVE,ALARM:Flapping
+2024-07-15 07:10:45,PVD-01,A003,WARNING,ALM_201,Target power instability,CLEARED,ALARM:Flapping
+2024-07-15 07:11:00,PVD-01,A003,WARNING,ALM_201,Target power instability,ACTIVE,ALARM:Flapping
+2024-07-15 07:11:15,PVD-01,A003,WARNING,ALM_201,Target power instability,CLEARED,ALARM:Flapping
+2024-07-15 07:20:00,PVD-01,A004,CRITICAL,ALM_301,Chamber vacuum loss,ACTIVE,ALARM:NeverCleared
+2024-07-15 07:21:00,PVD-01,A005,CRITICAL,ALM_302,Shutter mechanism jammed,ACTIVE,ALARM:NeverCleared
+2024-07-15 07:22:00,PVD-01,A004,INFO,ALM_301,Chamber vacuum loss,ACTIVE,CORRUPT:SeverityDowngrade
+2024-07-15 07:30:00,PVD-01,A006,WARNING,,Unknown parameter deviation,ACTIVE,MISSING_FIELD:AlarmCode
+2024-07-15 11:45:00,PVD-01,A007,INFO,EVT_010,Production resume [GAP: 4.4hr],CLEARED,TS_GAP:4.4hr
+2024-07-15 11:43:00,PVD-01,A008,INFO,EVT_009,PM complete [TS REVERSAL],CLEARED,TS_REVERSAL`,
+
     'multi_chamber_etch.json': JSON.stringify([
       {
         FabID: "FAB_01", EquipmentID: "ETCH_TOOL_02", ChamberID: "CH_A", RecipeID: "RCP_SI_ETCH_01", RunID: "RUN_ET02_001", LotID: "LOT_2026_0306",

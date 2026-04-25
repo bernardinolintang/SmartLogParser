@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, Filter } from 'lucide-react';
+import { TrendingUp, Filter, BarChart2 } from 'lucide-react';
 import type { ParsedEvent } from '@/lib/logParser';
 import type { HierarchyFilter } from './EquipmentHierarchy';
 
@@ -188,8 +188,21 @@ export default function ParameterTrends({ events, filter }: ParameterTrendsProps
       </div>
 
       {filtered.length === 0 && (
-        <div className="glass rounded-xl p-8 text-center">
-          <p className="text-muted-foreground text-sm">No data matches current filter</p>
+        <div className="glass rounded-xl p-10 text-center space-y-3">
+          <BarChart2 className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+          <p className="text-foreground font-medium text-sm">No data matches current filter</p>
+          <p className="text-xs text-muted-foreground">Try clearing the equipment filter in the sidebar.</p>
+        </div>
+      )}
+
+      {filtered.length > 0 && params.length === 0 && (
+        <div className="glass rounded-xl p-10 text-center space-y-3">
+          <BarChart2 className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+          <p className="text-foreground font-medium text-sm">No numeric sensor readings found</p>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+            This log contains alarm/event records but no sensor parameter values.
+            Try uploading a sensor trace file (e.g. FDC CSV with Temp, Pressure, RF Power columns).
+          </p>
         </div>
       )}
     </motion.div>
