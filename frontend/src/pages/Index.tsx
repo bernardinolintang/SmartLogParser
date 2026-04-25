@@ -25,6 +25,7 @@ import RawLogViewer from '@/components/RawLogViewer';
 import ArchitectureDiagram from '@/components/ArchitectureDiagram';
 import UploadHistory, { saveToHistory, loadHistory } from '@/components/UploadHistory';
 import ProfilePage from '@/components/ProfilePage';
+import { useStreaming } from '@/contexts/StreamingContext';
 import type { ParseResult } from '@/lib/logParser';
 
 type Tab = 'upload' | 'overview' | 'table' | 'analytics' | 'trends' | 'timeline' | 'alarms' | 'anomaly' | 'golden' | 'health' | 'streaming' | 'raw' | 'report' | 'compare' | 'architecture' | 'history' | 'profile';
@@ -48,6 +49,7 @@ const Index = () => {
   const [filter, setFilter] = useState<HierarchyFilter>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [historyCount, setHistoryCount] = useState(() => loadHistory().length);
+  const { streaming, mode, totalServerEvents, streamEvents } = useStreaming();
 
   const handleParsed = useCallback((r: ParseResult, name: string) => {
     setResult(r);
@@ -238,6 +240,19 @@ const Index = () => {
                 </>
               )}
             </div>
+            {streaming && (
+              <button
+                onClick={() => setActiveTab('streaming')}
+                className="ml-2 inline-flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-2.5 py-1 text-[10px] font-bold text-destructive hover:bg-destructive/15 transition-colors"
+                title="Streaming is running in the background. Click to view."
+              >
+                <Radio className="w-3 h-3 animate-pulse" />
+                LIVE
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {mode === 'backend' && totalServerEvents > 0 ? totalServerEvents : streamEvents.length}
+                </span>
+              </button>
+            )}
             {result && (
               <div className="ml-auto flex items-center gap-3 text-[10px] text-muted-foreground">
                 <span>{filteredEvents.length} events</span>
@@ -271,6 +286,7 @@ const Index = () => {
                       { label: 'JSON', cls: 'bg-primary/10 text-primary border-primary/20' },
                       { label: 'XML', cls: 'bg-info/10 text-info border-info/20' },
                       { label: 'CSV', cls: 'bg-success/10 text-success border-success/20' },
+                      { label: 'SECS/GEM', cls: 'bg-violet-500/10 text-violet-400 border-violet-400/20' },
                       { label: 'Syslog', cls: 'bg-warning/10 text-warning border-warning/20' },
                       { label: 'Key-Value', cls: 'bg-primary/10 text-primary border-primary/20' },
                       { label: 'Plain Text', cls: 'bg-secondary/50 text-secondary-foreground border-border' },
