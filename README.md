@@ -91,7 +91,7 @@ Semiconductor tools (plasma etch, CVD/PVD, lithography, metrology) produce high-
 - **Vendor normalization** (`TEMP_C` → `temperature`, etc.)
 - **Deduplication** within runs
 - **Golden-run baseline** and drift detection
-- **Streaming ingestion** simulation
+- **Streaming ingestion** simulation (runs in the background while you navigate)
 - **Industrial bridge** — pull from Elasticsearch, push to Splunk HEC
 - **BI connectors** — Grafana (PostgreSQL direct or `/api/bi/*`), Tableau & Power BI (OData v4 live feed at `/odata/`), Kibana (Elasticsearch)
 - **OData v4 endpoint** — live feed at `/odata/` for any OData-compatible BI tool
@@ -163,7 +163,7 @@ Every parser emits the same contract:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/upload` | File upload (multipart) |
-| POST | `/api/parse` | Parse raw content string |
+| POST | `/api/parse` | Parse file (multipart) and return normalized events (`store_to_elastic` optional) |
 | POST | `/api/stream/start` | Begin streaming session |
 | POST | `/api/stream/append` | Append chunk |
 | POST | `/api/stream/finish` | Finalize stream |
@@ -237,15 +237,29 @@ Every parser emits the same contract:
 | Kibana | Log search UI | Browse Elasticsearch index `fab-logs-2026` at `http://localhost:5601` |
 | CSV / JSON export | File export | `GET /api/runs/{run_id}/download/csv` or `/download/json` |
 
+### Upload → Elasticsearch indexing (optional)
+
+When the backend is available, uploads can be indexed into Elasticsearch for Kibana/Grafana workflows.
+
+- **Frontend toggle**: “Store parsed events to Elasticsearch”
+- **API flag**: `POST /api/parse?store_to_elastic=true|false`
+
 ### Elastic Stack used in this project
 
 | Component | Used | Role |
 |-----------|------|------|
-| **Elasticsearch** | Yes | Stores raw fab logs; SmartLogParser pulls from it |
+| **Elasticsearch** | Yes | Stores fab logs and (optionally) parsed upload events |
 | **Kibana** | Yes | Web UI to search/explore Elasticsearch data |
-| **Logstash** | No | Not configured — logs are seeded directly via `seed_data.py` |
+| **Logstash** | Optional | Forward/bridge logs into downstream systems (configurable pipeline included) |
 
-> This project uses **EK** (Elasticsearch + Kibana), not the full ELK stack. Logstash can be added as a future enhancement to forward logs from tools directly into Elasticsearch.
+> This project can run as **EK** (Elasticsearch + Kibana) and optionally include Logstash for forwarding.
+
+---
+
+## Testing
+
+- **Unit tests (frontend)**: `cd frontend; npm test`
+- **E2E UX audit**: `npx playwright test e2e/ux-audit.spec.ts`
 
 ---
 
