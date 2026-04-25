@@ -13,7 +13,11 @@ export default function AlarmInvestigation({ events }: AlarmInvestigationProps) 
   const alarms = useMemo(() => {
     return events
       .map((e, idx) => ({ event: e, index: idx }))
-      .filter(({ event }) => event.severity === 'alarm');
+      .filter(({ event }) =>
+        event.severity === 'alarm' ||
+        event.severity === 'critical' ||
+        event.event_type === 'alarm'
+      );
   }, [events]);
 
   const investigation = useMemo(() => {

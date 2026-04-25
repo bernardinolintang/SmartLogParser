@@ -79,8 +79,41 @@ export function detectFormat(content: string): LogFormat {
   return 'text';
 }
 
+const SEVERITY_NORMALIZE: Record<string, ParsedEvent['severity']> = {
+  alarm: 'alarm', ALARM: 'alarm',
+  critical: 'critical', CRITICAL: 'critical',
+  warning: 'warning', WARNING: 'warning',
+  info: 'info', INFO: 'info',
+};
+
+const EVENT_TYPE_NORMALIZE: Record<string, ParsedEvent['event_type']> = {
+  alarm: 'alarm', ALARM: 'alarm',
+  warning: 'warning', WARNING: 'warning',
+  sensor: 'sensor', SENSOR: 'sensor',
+  PARAMETER_READING: 'sensor', parameter_reading: 'sensor',
+  step_start: 'step_start', STEP_START: 'step_start',
+  step_end: 'step_end', STEP_END: 'step_end',
+  process_start: 'process_start', PROCESS_START: 'process_start',
+  process_end: 'process_end', PROCESS_END: 'process_end',
+  info: 'info', INFO: 'info',
+};
+
+function normalizeSeverity(raw?: string): ParsedEvent['severity'] {
+  if (!raw) return 'info';
+  return SEVERITY_NORMALIZE[raw] ?? 'info';
+}
+
+function normalizeEventType(raw?: string): ParsedEvent['event_type'] {
+  if (!raw) return 'sensor';
+  return EVENT_TYPE_NORMALIZE[raw] ?? 'sensor';
+}
+
 function makeEvent(partial: Partial<ParsedEvent>): ParsedEvent {
   const toolId = partial.tool_id || partial.equipment_id || '';
+  const rawSeverity = partial.severity as string | undefined;
+  const rawEventType = partial.event_type as string | undefined;
+  const sev = normalizeSeverity(rawSeverity);
+  const evType = normalizeEventType(rawEventType);
   return {
     timestamp: partial.timestamp || new Date().toISOString(),
     fab_id: partial.fab_id || '',
@@ -88,7 +121,7 @@ function makeEvent(partial: Partial<ParsedEvent>): ParsedEvent {
     chamber_id: partial.chamber_id || '',
     recipe_name: partial.recipe_name || partial.recipe_id || '',
     recipe_step: partial.recipe_step || partial.step_id || '',
-    event_type: partial.event_type || 'sensor',
+    event_type: evType,
     parameter: partial.parameter || '',
     value: partial.value || '',
     unit: partial.unit,
@@ -96,11 +129,26 @@ function makeEvent(partial: Partial<ParsedEvent>): ParsedEvent {
     run_id: partial.run_id || `RUN_${Date.now().toString(36).slice(-6).toUpperCase()}`,
     lot_id: partial.lot_id,
     wafer_id: partial.wafer_id,
-    severity: partial.severity || 'info',
+    severity: sev,
     equipment_id: toolId,
     step_id: partial.recipe_step || partial.step_id || '',
     recipe_id: partial.recipe_name || partial.recipe_id || '',
   };
+}
+
+const _JSON_META_KEYS = new Set([
+  'EquipmentID', 'equipment_id', 'RecipeID', 'LotID', 'Timestamp', 'timestamp',
+  'ToolID', 'tool_id', 'FabID', 'fab_id', 'ChamberID', 'chamber_id', 'RunID', 'run_id',
+  'event_type', 'severity', 'alarm_code', 'message', 'unit', 'parameter', 'value',
+  'recipe_name', 'recipe_step', 'step_id', 'wafer_id', 'lot_id',
+]);
+
+function _isFlatEventObject(row: Record<string, unknown>): boolean {
+  return (
+    row.event_type !== undefined ||
+    row.parameter !== undefined ||
+    row.alarm_code !== undefined
+  );
 }
 
 function parseJSON(content: string): ParsedEvent[] {
@@ -112,19 +160,20 @@ function parseJSON(content: string): ParsedEvent[] {
       if (!item || typeof item !== 'object') continue;
       const row = item as Record<string, unknown>;
       const toolId = String(row.EquipmentID || row.equipment_id || row.ToolID || row.tool_id || '');
-      const recipeId = String(row.RecipeID || row.recipe_id || row.RecipeName || '');
+      const recipeId = String(row.RecipeID || row.recipe_id || row.RecipeName || row.recipe_name || '');
       const lotId = row.LotID || row.lot_id ? String(row.LotID || row.lot_id) : undefined;
       const fabId = String(row.FabID || row.fab_id || '');
       const chamberId = String(row.ChamberID || row.chamber_id || '');
       const runId = String(row.RunID || row.run_id || `RUN_${toolId.slice(-2)}_001`);
 
       if (row.ProcessSteps || row.steps) {
+        // Structured log with nested steps
         const steps = Array.isArray(row.ProcessSteps) ? row.ProcessSteps : (Array.isArray(row.steps) ? row.steps : []);
         for (const step of steps) {
           if (!step || typeof step !== 'object') continue;
           const stepRow = step as Record<string, unknown>;
           const stepId = stepRow.StepID || stepRow.step_id || stepRow.id;
-          const stepName = stepRow.StepName || stepRow.step_name || '';
+          const stepName = String(stepRow.StepName || stepRow.step_name || stepId || '');
           const paramsRaw = stepRow.Parameters || stepRow.parameters || stepRow.params || {};
           const params = (paramsRaw && typeof paramsRaw === 'object') ? paramsRaw as Record<string, unknown> : {};
           for (const [key, val] of Object.entries(params)) {
@@ -136,7 +185,7 @@ function parseJSON(content: string): ParsedEvent[] {
               tool_id: toolId,
               chamber_id: chamberId,
               recipe_name: recipeId,
-              recipe_step: stepName || String(stepId),
+              recipe_step: stepName,
               event_type: 'sensor',
               parameter: normalizeParam(key),
               value: vObj ? String(vObj.value ?? String(v)) : String(v),
@@ -147,9 +196,35 @@ function parseJSON(content: string): ParsedEvent[] {
             }));
           }
         }
+      } else if (_isFlatEventObject(row)) {
+        // Flat event object (one row = one event, like plasma_etch_01.json array items)
+        const param = row.parameter ? normalizeParam(String(row.parameter)) : '';
+        const value = row.value !== null && row.value !== undefined ? String(row.value) : '';
+        // Only emit a real event if it has a parameter+value OR an event_type that matters
+        if (param || row.event_type) {
+          events.push(makeEvent({
+            timestamp: String(row.timestamp || row.Timestamp || new Date().toISOString()),
+            fab_id: fabId,
+            tool_id: toolId,
+            chamber_id: chamberId,
+            recipe_name: recipeId,
+            recipe_step: String(row.recipe_step || row.step_id || ''),
+            event_type: String(row.event_type || 'sensor') as ParsedEvent['event_type'],
+            parameter: param,
+            value,
+            unit: row.unit ? String(row.unit) : undefined,
+            alarm_code: row.alarm_code ? String(row.alarm_code) : undefined,
+            run_id: runId,
+            lot_id: lotId,
+            wafer_id: row.wafer_id ? String(row.wafer_id) : undefined,
+            severity: String(row.severity || 'info') as ParsedEvent['severity'],
+            message: row.message ? String(row.message) : undefined,
+          }));
+        }
       } else {
+        // Generic object — one event per non-meta key
         for (const [key, val] of Object.entries(row)) {
-          if (['EquipmentID', 'equipment_id', 'RecipeID', 'LotID', 'Timestamp', 'ToolID', 'FabID', 'ChamberID', 'RunID'].includes(key)) continue;
+          if (_JSON_META_KEYS.has(key)) continue;
           events.push(makeEvent({
             timestamp: String(row.Timestamp || row.timestamp || new Date().toISOString()),
             fab_id: fabId,
@@ -288,28 +363,63 @@ function parseHex(content: string): ParsedEvent[] {
   })];
 }
 
+const _KV_META_KEYS = new Set([
+  'timestamp', 'equipment_id', 'tool_id', 'fab_id', 'chamber_id', 'run_id',
+  'recipe_name', 'recipe_step', 'event_type', 'severity', 'alarm_code',
+  'message', 'unit', 'lot_id', 'wafer_id', 'parameter', 'value',
+]);
+
 function parseKeyValue(content: string): ParsedEvent[] {
   const events: ParsedEvent[] = [];
   const lines = content.trim().split('\n');
   for (const line of lines) {
     if (!line.trim()) continue;
     const pairs: Record<string, string> = {};
-    const matches = line.matchAll(/(\w+)=(\S+)/g);
+    const matches = line.matchAll(/(\w+)=("([^"]*)"|\S+)/g);
     for (const m of matches) {
-      pairs[m[1]] = m[2];
+      pairs[m[1]] = m[3] !== undefined ? m[3] : m[2];
     }
-    if (Object.keys(pairs).length > 0) {
-      const timestamp = pairs['timestamp'] || new Date().toISOString();
-      const toolId = pairs['equipment_id'] || pairs['tool_id'] || '';
-      delete pairs['timestamp'];
-      delete pairs['equipment_id'];
-      delete pairs['tool_id'];
+    if (Object.keys(pairs).length === 0) continue;
+
+    const timestamp = pairs['timestamp'] || new Date().toISOString();
+    const toolId = pairs['tool_id'] || pairs['equipment_id'] || '';
+    const chamberId = pairs['chamber_id'] || '';
+    const fabId = pairs['fab_id'] || '';
+    const runId = pairs['run_id'] || '';
+    const recipeName = pairs['recipe_name'] || '';
+    const recipeStep = pairs['recipe_step'] || '';
+    const eventType = pairs['event_type'] || 'sensor';
+    const severity = pairs['severity'] || 'info';
+    const alarmCode = pairs['alarm_code'] && pairs['alarm_code'] !== 'None' ? pairs['alarm_code'] : undefined;
+    const explicitParam = pairs['parameter'];
+    const explicitValue = pairs['value'];
+    const unit = pairs['unit'];
+    const lotId = pairs['lot_id'];
+    const waferId = pairs['wafer_id'];
+
+    if (explicitParam) {
+      // Structured KV: parameter= and value= are explicit keys
+      events.push(makeEvent({
+        timestamp, tool_id: toolId, fab_id: fabId, chamber_id: chamberId,
+        run_id: runId, recipe_name: recipeName, recipe_step: recipeStep,
+        event_type: eventType as ParsedEvent['event_type'],
+        parameter: normalizeParam(explicitParam),
+        value: explicitValue || '',
+        unit, alarm_code: alarmCode, lot_id: lotId, wafer_id: waferId,
+        severity: severity as ParsedEvent['severity'],
+      }));
+    } else {
+      // Implicit KV: non-meta keys are parameter=value pairs
       for (const [key, val] of Object.entries(pairs)) {
+        if (_KV_META_KEYS.has(key)) continue;
         events.push(makeEvent({
-          timestamp,
-          tool_id: toolId,
+          timestamp, tool_id: toolId, fab_id: fabId, chamber_id: chamberId,
+          run_id: runId, recipe_name: recipeName, recipe_step: recipeStep,
+          event_type: eventType as ParsedEvent['event_type'],
           parameter: normalizeParam(key),
           value: val,
+          unit, alarm_code: alarmCode, lot_id: lotId, wafer_id: waferId,
+          severity: severity as ParsedEvent['severity'],
         }));
       }
     }

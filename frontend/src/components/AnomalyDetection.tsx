@@ -2,15 +2,88 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShieldAlert, AlertTriangle, CheckCircle, Activity, TrendingUp, Loader2 } from 'lucide-react';
 import { fetchRunAnomalies, type AnomalyResponse, type AnomalyResult } from '@/lib/api';
+import type { ParsedEvent } from '@/lib/logParser';
 
 interface AnomalyDetectionProps {
   runId: string | null;
+  events?: ParsedEvent[];
 }
 
-export default function AnomalyDetection({ runId }: AnomalyDetectionProps) {
+function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
+  const Z_THRESHOLD = 2.5;
+  const ROLLING_WINDOW = 10;
+  const ROLLING_THRESHOLD = 2.0;
+
+  const paramReadings: Record<string, Array<{ ts: string; val: number; idx: number }>> = {};
+  events.forEach((e, idx) => {
+    if (e.event_type !== 'sensor' && e.event_type !== 'info') return;
+    const n = parseFloat(e.value);
+    if (isNaN(n) || !e.parameter) return;
+    if (!paramReadings[e.parameter]) paramReadings[e.parameter] = [];
+    paramReadings[e.parameter].push({ ts: e.timestamp, val: n, idx });
+  });
+
+  const anomalies: AnomalyResult[] = [];
+  for (const [param, readings] of Object.entries(paramReadings)) {
+    if (readings.length < 3) continue;
+    const vals = readings.map(r => r.val);
+    const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const std = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+
+    for (const { ts, val, idx } of readings) {
+      const z = std > 0 ? (val - mean) / std : 0;
+      if (Math.abs(z) >= Z_THRESHOLD) {
+        anomalies.push({
+          parameter: param, timestamp: ts, value: val, mean, std,
+          z_score: parseFloat(z.toFixed(3)),
+          type: 'z_score',
+          severity: Math.abs(z) >= Z_THRESHOLD * 1.5 ? 'alarm' : 'warning',
+          description: `${param} reading ${val} is ${Math.abs(z).toFixed(1)}σ from mean ${mean.toFixed(4)}`,
+          event_index: idx,
+        });
+      }
+    }
+
+    const window: number[] = [];
+    for (const { ts, val, idx } of readings) {
+      if (window.length >= 3) {
+        const wMean = window.reduce((a, b) => a + b, 0) / window.length;
+        const wStd = Math.sqrt(window.reduce((a, b) => a + (b - wMean) ** 2, 0) / window.length);
+        const rz = wStd > 0 ? Math.abs(val - wMean) / wStd : 0;
+        if (rz >= ROLLING_THRESHOLD && !anomalies.find(a => a.event_index === idx && a.type === 'z_score')) {
+          anomalies.push({
+            parameter: param, timestamp: ts, value: val, mean: parseFloat(wMean.toFixed(4)), std: parseFloat(wStd.toFixed(4)),
+            z_score: parseFloat(rz.toFixed(3)),
+            type: 'rolling_drift',
+            severity: 'warning',
+            description: `${param} drift: ${val} deviates ${rz.toFixed(1)}σ from rolling mean ${wMean.toFixed(4)}`,
+            event_index: idx,
+          });
+        }
+      }
+      if (window.length >= ROLLING_WINDOW) window.shift();
+      window.push(val);
+    }
+  }
+  anomalies.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+
+  const totalReadings = Object.values(paramReadings).reduce((s, r) => s + r.length, 0);
+  return {
+    run_id: 'local',
+    anomaly_count: anomalies.length,
+    z_score_anomalies: anomalies.filter(a => a.type === 'z_score').length,
+    drift_anomalies: anomalies.filter(a => a.type === 'rolling_drift').length,
+    parameters_with_anomalies: [...new Set(anomalies.map(a => a.parameter))].sort(),
+    total_readings_analysed: totalReadings,
+    anomalies,
+  };
+}
+
+export default function AnomalyDetection({ runId, events = [] }: AnomalyDetectionProps) {
   const [data, setData] = useState<AnomalyResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLocal, setIsLocal] = useState(false);
 
   useEffect(() => {
     if (!runId) {
@@ -19,11 +92,20 @@ export default function AnomalyDetection({ runId }: AnomalyDetectionProps) {
     }
     setLoading(true);
     setError(null);
+    setIsLocal(false);
     fetchRunAnomalies(runId)
-      .then(setData)
-      .catch(err => setError(err.message ?? 'Failed to load anomaly data'))
+      .then(result => { setData(result); })
+      .catch(() => {
+        // Backend unavailable or run not in DB — fall back to local computation
+        if (events.length > 0) {
+          setData(computeLocalAnomalies(events));
+          setIsLocal(true);
+        } else {
+          setError('Backend unavailable and no events to analyse locally.');
+        }
+      })
       .finally(() => setLoading(false));
-  }, [runId]);
+  }, [runId, events]);
 
   if (!runId) {
     return (
@@ -154,8 +236,9 @@ export default function AnomalyDetection({ runId }: AnomalyDetectionProps) {
       <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-lg px-4 py-2.5">
         <Activity className="w-3.5 h-3.5 flex-shrink-0" />
         <span>
-          <span className="font-medium text-foreground">Server-side detection</span> —
+          <span className="font-medium text-foreground">{isLocal ? 'Client-side detection' : 'Server-side detection'}</span> —
           Z-score (|z|&gt;2.5 flags outliers) + rolling-mean drift (window=10, |z|&gt;2.0 flags parameter drift).
+          {isLocal && <span className="text-warning ml-1">(Backend offline — results computed locally)</span>}
           {data.parameters_with_anomalies.length > 0 && (
             <> Flagged: <span className="font-medium text-foreground">{data.parameters_with_anomalies.join(', ')}</span>.</>
           )}
