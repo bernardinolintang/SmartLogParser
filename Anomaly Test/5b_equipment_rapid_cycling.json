@@ -1,0 +1,158 @@
+{
+  "tool": "DIFF-TOOL-04",
+  "date": "2024-07-15",
+  "events": [
+    {
+      "timestamp": "2024-07-15T10:00:00",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "OFFLINE",
+      "durationSec": 0,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-07-15T10:05:00",
+      "toolID": "DIFF-TOOL-04",
+      "state": "SETUP",
+      "prevState": "IDLE",
+      "durationSec": 300,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-07-15T10:10:00",
+      "toolID": "DIFF-TOOL-04",
+      "state": "PROCESSING",
+      "prevState": "SETUP",
+      "durationSec": 300,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-07-15T10:15:00",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 300,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-07-15T10:15:01",
+      "toolID": "DIFF-TOOL-04",
+      "state": "PROCESSING",
+      "prevState": "IDLE",
+      "durationSec": 1,
+      "anomaly": "OUT_OF_RANGE:RapidCycle"
+    },
+    {
+      "timestamp": "2024-07-15T10:15:02",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 1,
+      "anomaly": "OUT_OF_RANGE:RapidCycle"
+    },
+    {
+      "timestamp": "2024-07-15T10:15:03",
+      "toolID": "DIFF-TOOL-04",
+      "state": "PROCESSING",
+      "prevState": "IDLE",
+      "durationSec": 1,
+      "anomaly": "OUT_OF_RANGE:RapidCycle"
+    },
+    {
+      "timestamp": "2024-07-15T10:15:04",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 1,
+      "anomaly": "OUT_OF_RANGE:RapidCycle"
+    },
+    {
+      "timestamp": "2024-07-15T10:15:05",
+      "toolID": "DIFF-TOOL-04",
+      "state": "PROCESSING",
+      "prevState": "IDLE",
+      "durationSec": 1,
+      "anomaly": "OUT_OF_RANGE:RapidCycle"
+    },
+    {
+      "timestamp": "2024-07-15T10:15:06",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 1,
+      "anomaly": "OUT_OF_RANGE:RapidCycle"
+    },
+    {
+      "timestamp": "2024-07-15T10:16:00",
+      "toolID": "DIFF-TOOL-04",
+      "state": "PROCESSING",
+      "prevState": "IDLE",
+      "durationSec": 54,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-07-15T11:16:00",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 3600,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-07-15T11:16:01",
+      "toolID": "DIFF-TOOL-04",
+      "state": "ALARM",
+      "prevState": "IDLE",
+      "durationSec": 1,
+      "anomaly": "ALARM"
+    },
+    {
+      "timestamp": "2024-07-15T11:16:02",
+      "toolID": "DIFF-TOOL-04",
+      "state": "PROCESSING",
+      "prevState": "ALARM",
+      "durationSec": 1,
+      "anomaly": "CORRUPT:IllegalStateTransition"
+    },
+    {
+      "timestamp": "2024-07-15T11:23:20",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 438,
+      "anomaly": null
+    },
+    {
+      "timestamp": "2024-07-15T11:23:21",
+      "toolID": null,
+      "state": "SETUP",
+      "prevState": "IDLE",
+      "durationSec": 1,
+      "anomaly": "MISSING_FIELD:toolID"
+    },
+    {
+      "timestamp": "2024-07-15T12:30:00",
+      "toolID": "DIFF-TOOL-04",
+      "state": "PROCESSING",
+      "prevState": "SETUP",
+      "durationSec": 3999,
+      "anomaly": "TS_GAP:66min"
+    },
+    {
+      "timestamp": "2024-07-15T12:29:10",
+      "toolID": "DIFF-TOOL-04",
+      "state": "IDLE",
+      "prevState": "PROCESSING",
+      "durationSec": 50,
+      "anomaly": "TS_REVERSAL"
+    },
+    {
+      "timestamp": null,
+      "toolID": "DIFF-TOOL-04",
+      "state": null,
+      "prevState": null,
+      "durationSec": null,
+      "anomaly": "CORRUPT:NullState"
+    }
+  ]
+}

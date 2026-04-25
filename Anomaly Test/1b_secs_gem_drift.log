@@ -1,0 +1,21 @@
+========================================================================
+SECS/GEM MESSAGE LOG — TOOL: CVD-TOOL-12  DATE: 2024-07-15
+Scenario: Gradual temperature drift + duplicate S-block IDs
+========================================================================
+[2024-07-15T06:00:00] S1F3     HOST→EQP     Status Request
+[2024-07-15T06:00:02] S1F4     EQP→HOST     Status Reply: READY
+[2024-07-15T06:00:10] S2F41    HOST→EQP     Start Recipe R_CVD_SiN_V2
+[2024-07-15T06:00:20] S6F11    EQP→HOST     TEMP_SENSOR=301.1
+[2024-07-15T06:00:35] S6F11    EQP→HOST     TEMP_SENSOR=303.4
+[2024-07-15T06:00:50] S6F11    EQP→HOST     TEMP_SENSOR=306.8
+[2024-07-15T06:01:05] S6F11    EQP→HOST     TEMP_SENSOR=312.2
+[2024-07-15T06:01:20] S6F11    EQP→HOST     TEMP_SENSOR=319.9 [DRIFT WARNING: +18.8C/min]  [!ANOMALY:OUT_OF_RANGE:GradualDrift]
+[2024-07-15T06:01:35] S6F11    EQP→HOST     TEMP_SENSOR=329.5 [DRIFT CONTINUING]  [!ANOMALY:OUT_OF_RANGE:GradualDrift]
+[2024-07-15T06:01:50] S6F11    EQP→HOST     TEMP_SENSOR=344.7 [DRIFT CONTINUING]  [!ANOMALY:OUT_OF_RANGE:GradualDrift]
+[2024-07-15T06:02:00] S5F1     EQP→HOST     Alarm: ALID=0x1A 'Thermal drift out of spec'  [!ANOMALY:ALARM]
+[2024-07-15T06:02:00] S5F1     EQP→HOST     Alarm: ALID=0x1A [DUPLICATE BLOCK ID — same SYS_BYTES as above]  [!ANOMALY:CORRUPT:DuplicateBlockID]
+[2024-07-15T06:02:05] S2F41    HOST→EQP     ABORT command sent
+[2024-07-15T06:02:10] S6F11    EQP→HOST     Event: ProcessAborted [S2F42 ACK MISSING — TIMEOUT]  [!ANOMALY:MISSING_FIELD:S2F42_Ack]
+[2024-07-15T06:10:00] S1F13    HOST→EQP     Re-establish comms after 470s gap  [!ANOMALY:TS_GAP:470s]
+[2024-07-15T06:10:01] S1F14    EQP→HOST     Comms re-established
+[2024-07-15T06:09:58] S6F11    EQP→HOST     Event: SafetyReset [TIMESTAMP REVERSAL]  [!ANOMALY:TS_REVERSAL]

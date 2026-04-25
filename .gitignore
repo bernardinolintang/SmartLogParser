@@ -39,3 +39,7 @@ __pycache__/
 *.sln
 *.sw?
 Micron Hackathon Slides.pdf
+Micron @ AISG National AI Student Challenge.pdf
+
+# Database
+smart_log_parser.db

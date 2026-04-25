@@ -1,0 +1,25 @@
+===========================================================================
+RECIPE EXECUTION LOG
+Tool    : LPCVD-TOOL-02
+Recipe  : R_LPCVD_Poly_Si_V6
+Operator: ENG_OVERRIDE (manual intervention active)
+===========================================================================
+  [2024-07-15 12:00:00] STEP_01   LoadWafers           Expected:25                    Actual:25              PASS
+  [2024-07-15 12:02:00] STEP_02   PumpDown             Expected:5mTorr                Actual:4.9mTorr        PASS
+  [2024-07-15 12:08:00] STEP_03   HeatRamp             Expected:620C/10min            Actual:620.3C          PASS
+  [2024-07-15 12:18:00] STEP_04   [OVERRIDE]           SiH4_flow:original=80sccm      MANUAL_SET=150sccm     OVERRIDE  ← [!ANOMALY:OUT_OF_RANGE:ManualOverride_1.875x]
+  [2024-07-15 12:18:01] STEP_04   Deposition           Expected:80sccm                Actual:150sccm         RUNNING  ← [!ANOMALY:OUT_OF_RANGE:WrongGasFlow]
+  [2024-07-15 12:48:00] STEP_04   Deposition           Expected:30min                 Actual:30min           PASS
+  [2024-07-15 12:50:00] STEP_06   N2Purge              Expected:5min                  Actual:5min            PASS  ← [!ANOMALY:MISSING_FIELD:STEP_05_Skipped]
+  [2024-07-15 12:55:00] STEP_07   Vent                 Expected:3min                  Actual:3min            PASS
+  [2024-07-15 12:58:00] STEP_07   Vent                 Expected:ONCE                  Actual:2ndExec         FAIL  ← [!ANOMALY:CORRUPT:DuplicateStepExecution]
+  [2024-07-15 13:01:00] STEP_08   UnloadWafers         Expected:OK                    Actual:PARTIAL         FAIL  ← [!ANOMALY:ALARM:WaferTransferFault]
+  [2024-07-15 13:01:05] STEP_08   [ALARM]              ALM_T01                        WaferDropDetected      ACTIVE  ← [!ANOMALY:ALARM_CASCADE]
+  [2024-07-15 13:01:06] STEP_08   [ALARM]              ALM_T02                        RobotArmFault          ACTIVE  ← [!ANOMALY:ALARM_CASCADE]
+  [2024-07-15 13:01:07] STEP_08   [ALARM]              ALM_T03                        VacuumWandFailed       ACTIVE  ← [!ANOMALY:ALARM_CASCADE]
+  [2024-07-15 17:30:00] STEP_09   RecipeResume         GAP:4.5hr                      MaintComplete          RESUMED  ← [!ANOMALY:TS_GAP:4.5hr]
+  [2024-07-15 17:27:00] STEP_09   [OVERRIDE]           TempSetpt:original=620         MANUAL_SET=580         OVERRIDE  ← [!ANOMALY:TS_REVERSAL]
+  [2024-07-15 17:31:00] STEP_10   EndRecipe            Expected:PASS                  Actual:PARTIAL         PARTIAL
+  [2024-07-15 17:??:??] STEP_??   [CORRUPTED]          ???                            ???                    ???  ← [!ANOMALY:CORRUPT]
+===========================================================================
+RECIPE END: PARTIAL — operator override and transfer fault recorded

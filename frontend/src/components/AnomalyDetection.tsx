@@ -18,7 +18,7 @@ function _parseTs(ts: string): number | null {
   return isNaN(t) ? null : t;
 }
 
-function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
+export function computeLocalAnomalies(events: ParsedEvent[]): AnomalyResponse {
   const Z_THRESHOLD = 2.5;
   const ROLLING_WINDOW = 10;
   const ROLLING_THRESHOLD = 2.0;

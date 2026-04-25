@@ -11,7 +11,7 @@ import LogTable from '@/components/LogTable';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import EngineerReport from '@/components/EngineerReport';
 import CrossVendorCompare from '@/components/CrossVendorCompare';
-import AnomalyDetection from '@/components/AnomalyDetection';
+import AnomalyDetection, { computeLocalAnomalies } from '@/components/AnomalyDetection';
 import EquipmentHierarchy from '@/components/EquipmentHierarchy';
 import type { HierarchyFilter } from '@/components/EquipmentHierarchy';
 import ToolOverview from '@/components/ToolOverview';
@@ -78,6 +78,11 @@ const Index = () => {
     return e;
   }, [result, filter]);
 
+  const anomalyCount = useMemo(() => {
+    if (!result || result.events.length === 0) return 0;
+    return computeLocalAnomalies(result.events).anomaly_count;
+  }, [result]);
+
   const tabs: { id: Tab; label: string; icon: React.ElementType; requiresResult?: boolean; group: string }[] = [
     { id: 'upload', label: 'Upload', icon: Upload, group: 'Ingest' },
     { id: 'history', label: 'History', icon: History, group: 'Ingest' },
@@ -126,6 +131,8 @@ const Index = () => {
                   const disabled = tab.requiresResult && !result;
                   const active = activeTab === tab.id;
                   const hasAlarms = tab.id === 'alarms' && result && result.summary.alarms > 0;
+                  const hasAnomalies = tab.id === 'anomaly' && anomalyCount > 0;
+                  const hasBadge = hasAlarms || hasAnomalies;
                   return (
                     <button
                       key={tab.id}
@@ -148,7 +155,12 @@ const Index = () => {
                           {result!.summary.alarms}
                         </span>
                       )}
-                      {tab.id === 'history' && historyCount > 0 && !hasAlarms && (
+                      {hasAnomalies && (
+                        <span className="ml-auto px-1.5 py-0.5 rounded-full bg-warning/20 text-warning text-[9px] font-bold">
+                          {anomalyCount}
+                        </span>
+                      )}
+                      {tab.id === 'history' && historyCount > 0 && !hasBadge && (
                         <span className="ml-auto px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground text-[9px] font-bold">
                           {historyCount}
                         </span>
@@ -384,7 +396,7 @@ const Index = () => {
                     Golden Run Comparison
                   </h2>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Mark a reference run as golden and compare parameter deviations against it.
+                    Save a known-good run as the golden baseline, then compare any other run against it to detect parameter drift.
                   </p>
                 </div>
                 <GoldenRunCompare events={filteredEvents} />

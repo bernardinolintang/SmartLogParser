@@ -1,0 +1,28 @@
+WAFER LOT TRACE LOG
+Tool   : CMP-TOOL-03
+LotID  : LOT_2024_0715_A
+Recipe : R_CMP_STI_V1
+-----------------------------------------------------------------
+  2024-07-15 09:00:00  WAF_001    LOAD           25LOT                        OK          
+  2024-07-15 09:02:00  WAF_001    POLISH         2:30                         OK          
+  2024-07-15 09:04:35  WAF_001    CLEAN          1:00                         OK          
+  2024-07-15 09:05:40  WAF_001    UNLOAD         25LOT                        OK          
+  2024-07-15 09:06:00  WAF_002    LOAD           25LOT                        OK          
+  2024-07-15 09:07:00  WAF_002    POLISH         2:30                         OK          
+  2024-07-15 09:08:00  WAF_002    RECIPE_CHG     R_CMP_Cu_V3                  MISMATCH      ← [!ANOMALY:OUT_OF_RANGE:WrongRecipe]
+  2024-07-15 09:08:01  WAF_002    POLISH         2:30                         OK            ← [!ANOMALY:OUT_OF_RANGE:RunningWrongRecipe]
+  2024-07-15 09:10:35  WAF_002    UNLOAD         25LOT                        OK          
+  2024-07-15 09:11:00  WAF_003    LOAD           25LOT                        OK          
+  2024-07-15 09:11:30  WAF_X77    LOAD           DIFF_LOT:LOT_2024_0715_C     MISMATCH      ← [!ANOMALY:CORRUPT:LotMixup]
+  2024-07-15 09:12:00  WAF_003    POLISH         2:30                         OK          
+  2024-07-15 09:14:35  WAF_003    CLEAN          1:00                         OK          
+  2024-07-15 09:15:40  WAF_003    UNLOAD         25LOT                        OK          
+  2024-07-15 09:16:00  WAF_004    LOAD           25LOT                        OK          
+  2024-07-15 09:18:00  WAF_004    POLISH         2:30                         OK          
+  2024-07-15 09:20:35  WAF_004    UNLOAD         25LOT                        OK            ← [!ANOMALY:MISSING_FIELD:CLEAN_step_skipped]
+  2024-07-15 13:00:00  WAF_005    LOAD           25LOT                        OK            ← [!ANOMALY:TS_GAP:3.7hr]
+  2024-07-15 12:58:00  WAF_005    POLISH         2:30                         OK            ← [!ANOMALY:TS_REVERSAL]
+  2024-07-15 13:03:00  WAF_005    UNLOAD         25LOT                        OK          
+  2024-07-15 13:04:??  WAF_???    ??STEP         ?.??                         ???           ← [!ANOMALY:CORRUPT]
+-----------------------------------------------------------------
+END OF LOG
